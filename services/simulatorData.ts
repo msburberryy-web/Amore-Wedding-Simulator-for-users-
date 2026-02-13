@@ -13,7 +13,7 @@ export interface CatalogItem {
   minPrice?: number;
   maxPrice?: number;
 }
-
+// -- Disable the venues showup
 export const VENUE_LIST: VenueSuggestion[] = [];
 
 export const VENUE_LIST_HIDEN: VenueSuggestion[] = [
