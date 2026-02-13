@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { QuoteItem, AmoreService, VenueInfo, MochikomiItem, QuoteCategory, VenueSuggestion } from './types';
 import { fetchMinimumFee } from './services/geminiService';
 import { MENU_CATALOG, CatalogItem, VENUE_LIST } from './services/simulatorData';
 import { ServiceCard } from './components/ServiceCard';
-import { Heart, Loader2, Sparkles, X, Info, Plus, Minus, Download, PieChart as PieChartIcon, ChevronRight, Settings, FileText, LayoutGrid, Users, Landmark, BookOpen, CheckCircle2, Wallet, TrendingUp, TrendingDown, ArrowRight, Image as ImageIcon, HelpCircle, Award, Star, Check, MousePointer2, ListChecks, MessageCircle, MapPin, Search } from 'lucide-react';
+import { Heart, Loader2, Sparkles, X, Info, Plus, Minus, Download, PieChart as PieChartIcon, ChevronRight, Settings, FileText, LayoutGrid, Users, Landmark, BookOpen, CheckCircle2, Wallet, TrendingUp, TrendingDown, ArrowRight, Image as ImageIcon, HelpCircle, Award, Star, Check, MousePointer2, ListChecks, MessageCircle, MapPin, Search, Clock } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 // --- TYPES ---
@@ -62,6 +63,8 @@ const TRANSLATIONS = {
     selectVenue: "Select this Venue",
     selected: "Selected",
     serviceDetails: "Service Details",
+    generatedOn: "Generated on",
+    amoreTokyo: "Amore Wedding Tokyo",
     categories: {
       [QuoteCategory.VENUE_FEE]: 'Venue & Facilities',
       [QuoteCategory.FOOD_DRINK]: 'Food & Beverage',
@@ -122,6 +125,8 @@ const TRANSLATIONS = {
     selectVenue: "この会場を選択",
     selected: "選択済み",
     serviceDetails: "サービス詳細",
+    generatedOn: "作成日時",
+    amoreTokyo: "Amore Wedding Tokyo",
     categories: {
       [QuoteCategory.VENUE_FEE]: '会場費・設備',
       [QuoteCategory.FOOD_DRINK]: '料理・飲料',
@@ -177,10 +182,12 @@ const TRANSLATIONS = {
     perPerson: "တစ်ဦးလျှင်",
     recommendedVenues: "နမူနာခန်းမများ",
     recommendedVenuesDesc: "သင်ရွေးချယ်ထားသော အတိုင်းအတာအတွင်းရှိ ခန်းမများ (အများဆုံး ¥",
-    venuePackageNote: "မှတ်ချက်- ဤခန်းမ Package ဈေးနှုန်းများတွင် အစားအသောက်နှင့် အဖျော်ယမကာများအပြင် ပန်းအလှဆင်ခြင်း၊ ဝတ်စုံနှင့် အလှပြင်ခြင်း စသည့် ဝန်ဆောင်မှုများ ပါဝင်နေနိုင်ပါသည်။ အသေးစိတ်ကို သက်ဆိုင်ရာ ခန်းမ၏ တရားဝင် ဝဘ်ဆိုဒ်များတွင် စစ်ဆေးကြည့်ရှုပါ။",
+    venuePackageNote: "မှတ်ချက်- ဤခန်းမ Package ဈေးနှုန်းများတွင် အအစားအသောက်နှင့် အဖျော်ယမကာများအပြင် ပန်းအလှဆင်ခြင်း၊ ဝတ်စုံနှင့် အလှပြင်ခြင်း စသည့် ဝန်ဆောင်မှုများ ပါဝင်နေနိုင်ပါသည်။ အသေးစိတ်ကို သက်ဆိုင်ရာ ခန်းမ၏ တရားဝင် ဝဘ်ဆိုဒ်များတွင် စစ်ဆေးကြည့်ရှုပါ။",
     selectVenue: "ဤခန်းမကို ရွေးချယ်မည်",
     selected: "ရွေးချယ်ပြီး",
     serviceDetails: "ဝန်ဆောင်မှု အသေးစိတ်",
+    generatedOn: "ထုတ်ပေးသည့်အချိန်",
+    amoreTokyo: "Amore Wedding Tokyo",
     categories: {
       [QuoteCategory.VENUE_FEE]: 'ခန်းမနှင့် အဆောက်အအုံ',
       [QuoteCategory.FOOD_DRINK]: 'အစားအသောက်နှင့် အဖျော်ယမကာ',
@@ -302,6 +309,7 @@ export default function App() {
   const [venueCalcMode, setVenueCalcMode] = useState<VenueCalcMode>('perPerson');
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
+  const [downloadTime, setDownloadTime] = useState<string>('');
 
   const todayDate = new Date().toLocaleDateString(
     language === 'ja' ? 'ja-JP' : (language === 'my' ? 'my-MM' : 'en-US')
@@ -332,7 +340,6 @@ export default function App() {
     ? selectedPkgItem.unitPrice 
     : targetBudgetPerPerson;
 
-  // Logic to suggest venues based on the effective reference price
   const suggestedVenues = VENUE_LIST.filter(v => v.avgPricePerPerson <= currentPriceReference)
     .sort((a, b) => b.avgPricePerPerson - a.avgPricePerPerson);
 
@@ -357,7 +364,7 @@ export default function App() {
               isPerGuest: true,
               minPrice: packageItem.minPrice,
               maxPrice: packageItem.maxPrice,
-              description: packageItem.info?.en // Add basic description
+              description: packageItem.info?.[language] || packageItem.info?.en 
            };
            return [...others, newItem];
         });
@@ -365,7 +372,7 @@ export default function App() {
     } else {
       setQuoteItems(prev => prev.filter(i => i.name !== 'Venue Service Package (Per Person)'));
     }
-  }, [venueCalcMode, venueInfo.guestCount]);
+  }, [venueCalcMode, venueInfo.guestCount, language]);
 
   useEffect(() => {
     setAmoreServices(prev => prev.map(s => {
@@ -392,44 +399,59 @@ export default function App() {
   };
 
   const getAmoreOptionText = (service: AmoreService) => {
-    switch (service.id) {
-      case '1':
-        if (service.currentPrice >= 120000) return "Sulryar yit pat burmese style included.";
-        if (service.currentPrice >= 115000) return "Includes chapel style.";
-        return "Standard planning without chapel.";
-      case 'amore_main_fl':
-        if (service.currentPrice >= 120000) return "One Rank Up Luxury Floral";
-        return "Standard Main Table Arrangement";
-      case '2':
-        if (service.currentPrice >= 150000) return "Full HD Quality / Premium Cuts";
-        return "Standard Day-of Recording";
-      case 'dress':
-        if (service.currentPrice >= 50000) return "2 dresses and accessories set";
-        return "One dress and accessories set";
-      case 'makeup':
-        if (service.currentPrice >= 70000) return "2 looks with trial rehearsal";
-        if (service.currentPrice >= 50000) return "With trial rehearsal included";
-        return "One standard bridal look";
-      default:
-        return "";
-    }
+    const configs: Record<string, Record<string, string>> = {
+      '1': {
+        en: service.currentPrice >= 120000 ? "Sulryar yit pat burmese style included." : (service.currentPrice >= 115000 ? "Includes chapel style." : "Standard planning without chapel."),
+        ja: service.currentPrice >= 120000 ? "ミャンマー伝統儀式（スリヤ・イッパ）対応。" : (service.currentPrice >= 115000 ? "チャペル挙式進行を含む。" : "スタンダードな披露宴のみの進行。"),
+        my: service.currentPrice >= 120000 ? "မြန်မာရိုးရာ စုလျားရစ်ပတ် မင်္ဂလာအခမ်းအနား ပါဝင်သည်။" : (service.currentPrice >= 115000 ? "ဝတ်ပြုဆောင် အစီအစဉ် ပါဝင်သည်။" : "ခန်းမအတွင်း အစီအစဉ်သာ ပါဝင်သည်။")
+      },
+      'amore_main_fl': {
+        en: service.currentPrice >= 120000 ? "One Rank Up Luxury Floral" : "Standard Main Table Arrangement",
+        ja: service.currentPrice >= 120000 ? "ワンランク上の豪華装花演出" : "標準メインテーブル装花",
+        my: service.currentPrice >= 120000 ? "အဆင့်မြင့် ပန်းအလှဆင်မှု" : "စံနှုန်းမီ ပင်မစားပွဲ ပန်းအလှဆင်မှု"
+      },
+      '2': {
+        en: service.currentPrice >= 150000 ? "Full HD Quality / Premium Cuts" : "Standard Day-of Recording",
+        ja: service.currentPrice >= 150000 ? "高画質フルHD / プレミアム編集" : "標準当日記録撮影",
+        my: service.currentPrice >= 150000 ? "Full HD အရည်အသွေးမြင့် မှတ်တမ်း" : "စံနှုန်းမီ မင်္ဂလာပွဲနေ့ မှတ်တမ်း"
+      },
+      'dress': {
+        en: service.currentPrice >= 50000 ? "2 dresses and accessories set" : "One dress and accessories set",
+        ja: service.currentPrice >= 50000 ? "ドレス2点と小物一式のセット" : "ドレス1点と小物一式のセット",
+        my: service.currentPrice >= 50000 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
+      },
+      'makeup': {
+        en: service.currentPrice >= 70000 ? "2 looks with trial rehearsal" : (service.currentPrice >= 50000 ? "With trial rehearsal included" : "One standard bridal look"),
+        ja: service.currentPrice >= 70000 ? "ヘアメイク2スタイル（リハーサル込）" : (service.currentPrice >= 50000 ? "ヘアメイク1スタイル（リハーサル込）" : "当日ヘアメイクのみ"),
+        my: service.currentPrice >= 70000 ? "အလှပြင် ၂ မျိုး (အစမ်းပြင်ဆင်မှု ပါဝင်)" : (service.currentPrice >= 50000 ? "အလှပြင် ၁ မျိုး (အစမ်းပြင်ဆင်မှု ပါဝင်)" : "မင်္ဂလာပွဲနေ့ အလှပြင်ခြင်း")
+      }
+    };
+
+    return configs[service.id]?.[language] || configs[service.id]?.en || "";
   };
 
   const handleDownloadImage = async () => {
-    const element = document.getElementById('quote-content');
-    if (!element) return;
-    setCapturing(true);
-    try {
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const link = document.createElement('a');
-      link.download = `amore-estimate-${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } catch (e) {
-      console.error("Export failed", e);
-    } finally {
-      setCapturing(false);
-    }
+    const now = new Date();
+    const timeStr = now.toLocaleString(language === 'ja' ? 'ja-JP' : (language === 'my' ? 'my-MM' : 'en-US'));
+    setDownloadTime(timeStr);
+    
+    // Wait for the state update and render
+    setTimeout(async () => {
+      const element = document.getElementById('quote-content');
+      if (!element) return;
+      setCapturing(true);
+      try {
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+        const link = document.createElement('a');
+        link.download = `amore-estimate-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (e) {
+        console.error("Export failed", e);
+      } finally {
+        setCapturing(false);
+      }
+    }, 100);
   };
 
   const updateItemQty = (name: string, delta: number) => {
@@ -464,7 +486,7 @@ export default function App() {
           unitPrice: catalogItem.unitPrice,
           quantity: catalogItem.isPerGuest ? venueInfo.guestCount : catalogItem.defaultQty,
           isPerGuest: catalogItem.isPerGuest,
-          description: catalogItem.info?.en,
+          description: catalogItem.info?.[language] || catalogItem.info?.en,
           info: catalogItem.info?.[language] || catalogItem.info?.['en'],
           minPrice: catalogItem.minPrice,
           maxPrice: catalogItem.maxPrice
@@ -496,11 +518,9 @@ export default function App() {
     setVenueInfo(prev => ({ ...prev, name: venue.name }));
     setVenueCalcMode('perPerson');
     
-    // Carry over the venue's average price per person to the "Venue Service Package"
     const packageItem = MENU_CATALOG.find(i => i.id === 'venue_package_per_person');
     if (packageItem) {
       setQuoteItems(prev => {
-        // Clear existing venue/food entries when selecting a new venue package
         const others = prev.filter(i => 
           i.category !== QuoteCategory.VENUE_FEE && 
           i.category !== QuoteCategory.FOOD_DRINK
@@ -510,18 +530,17 @@ export default function App() {
           id: crypto.randomUUID(),
           category: QuoteCategory.VENUE_FEE,
           name: packageItem.name.en,
-          unitPrice: venue.avgPricePerPerson, // Carried over price
+          unitPrice: venue.avgPricePerPerson, 
           quantity: venueInfo.guestCount,
           isPerGuest: true,
           minPrice: packageItem.minPrice,
           maxPrice: packageItem.maxPrice,
-          description: venue.description.en // Include venue description in quote
+          description: venue.description[language] || venue.description.en
         };
         return [...others, newItem];
       });
     }
 
-    // Scroll to the selected pkg selector
     const manualSelector = document.getElementById('venue-package-selector');
     if (manualSelector) {
         manualSelector.scrollIntoView({ behavior: 'smooth' });
@@ -588,7 +607,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-amore-600">
             <Heart className="fill-amore-500" />
-            <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight">Amore Wedding Tokyo</span>
+            <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight">{t.amoreTokyo}</span>
           </div>
           <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
              {(['en', 'ja', 'my'] as const).map(l => (
@@ -739,17 +758,12 @@ export default function App() {
                     })()}
                 </div>
 
-                {/* Sample venues section located here under per-person selector */}
                 {(venueInfo.targetBudget || venueCalcMode === 'perPerson') && (
                   <div className="max-w-7xl mx-auto space-y-8 animate-in slide-in-from-bottom-8 duration-500">
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-gray-100 pb-4 gap-4">
                        <div>
                           <h3 className="text-2xl font-serif font-bold text-gray-900">{t.recommendedVenues}</h3>
                           <p className="text-sm text-gray-500 mt-1">{t.recommendedVenuesDesc}{currentPriceReference.toLocaleString()} {t.perPerson})</p>
-                       </div>
-                       <div className="hidden sm:flex items-center gap-1 text-amore-500 text-xs font-black uppercase tracking-widest">
-                          <Search size={14} />
-                          Rule-Based Matching
                        </div>
                     </div>
 
@@ -794,7 +808,7 @@ export default function App() {
                          ))
                        ) : (
                          <div className="col-span-full py-12 text-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-                            <p className="text-gray-400 font-medium italic">No venues found matching this budget range. Try raising the package price bar.</p>
+                            <p className="text-gray-400 font-medium italic">No venues found matching this budget range.</p>
                          </div>
                        )}
                     </div>
@@ -831,7 +845,6 @@ export default function App() {
                                        {isSelected ? <Check size={18} /> : <Plus size={18} />}
                                     </button>
                                  </div>
-
                                  {isSelected && item.minPrice && (
                                    <div className="mt-4 px-2 py-4 bg-gray-50 rounded-2xl">
                                       <div className="flex justify-between text-[9px] font-black uppercase text-gray-400 mb-2">
@@ -853,7 +866,6 @@ export default function App() {
                                       </div>
                                    </div>
                                  )}
-                                 
                                  {isSelected && item.allowQtyEdit && (
                                     <div className="mt-4 flex items-center justify-between bg-gray-50 rounded-2xl p-3">
                                        <span className="text-[10px] font-black uppercase text-gray-400">{t.quantity}</span>
@@ -1024,6 +1036,7 @@ export default function App() {
                         <div className="space-y-8">
                            {venue.map(item => {
                              const originalCatItem = MENU_CATALOG.find(c => c.name.en === item.name);
+                             const itemDescription = originalCatItem?.info?.[language] || item.description || originalCatItem?.info?.en;
                              return (
                               <div key={item.id} className="space-y-1">
                                 <div className="flex justify-between items-baseline">
@@ -1033,9 +1046,9 @@ export default function App() {
                                    </div>
                                    <span className="font-mono font-bold text-base sm:text-lg">¥{(item.unitPrice * item.quantity).toLocaleString()}</span>
                                 </div>
-                                {item.description && (
+                                {itemDescription && (
                                   <p className="text-xs text-gray-500 italic mt-1 pl-4 border-l-2 border-gray-100 leading-relaxed">
-                                    {item.description}
+                                    {itemDescription}
                                   </p>
                                 )}
                               </div>
@@ -1045,6 +1058,7 @@ export default function App() {
                              const isPerTable = item.id === 'amore_guest_fl';
                              const totalItemPrice = item.currentPrice * (item.quantity || 1);
                              const optionDesc = getAmoreOptionText(item);
+                             const baseInfo = item.info?.[language] || item.info?.en;
                              return (
                               <div key={item.id} className="space-y-2">
                                 <div className="flex justify-between items-baseline text-amore-700 bg-amore-50/30 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 rounded-3xl border border-amore-50">
@@ -1054,11 +1068,18 @@ export default function App() {
                                    </div>
                                    <span className="font-mono font-bold text-lg sm:text-xl">¥{totalItemPrice.toLocaleString()}</span>
                                 </div>
-                                {optionDesc && (
-                                  <p className="text-xs text-amore-600/80 italic font-medium mt-1 pl-4 border-l-2 border-amore-100 leading-relaxed">
-                                    {optionDesc}
-                                  </p>
-                                )}
+                                <div className="flex flex-col gap-1 pl-4 border-l-2 border-amore-100">
+                                  {optionDesc && (
+                                    <p className="text-xs text-amore-600/80 italic font-bold leading-relaxed">
+                                      {optionDesc}
+                                    </p>
+                                  )}
+                                  {baseInfo && (
+                                    <p className="text-[10px] text-gray-400 italic leading-relaxed">
+                                      {baseInfo}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                              );
                            })}
@@ -1102,6 +1123,20 @@ export default function App() {
                     </div>
                  </div>
               </section>
+
+              {/* Branding and timestamp footer for the download */}
+              <div className="mt-12 pt-8 border-t border-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4 text-gray-400 text-[10px] font-bold uppercase tracking-widest italic">
+                  <div className="flex items-center gap-2">
+                    <Heart size={12} className="text-amore-500 fill-amore-500" />
+                    <span>{t.amoreTokyo}</span>
+                  </div>
+                  {downloadTime && (
+                    <div className="flex items-center gap-2">
+                      <Clock size={12} />
+                      <span>{t.generatedOn}: {downloadTime}</span>
+                    </div>
+                  )}
+              </div>
            </div>
         </div>
       </main>
