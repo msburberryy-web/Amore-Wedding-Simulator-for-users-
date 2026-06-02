@@ -41,10 +41,43 @@ const AMORE_TEMPLATE_NAMES: Record<string, string> = {
   'transport': '交通費',
 };
 
+// --- VENUE & AMORE CONFIG ---
+type FoodPlanType = 'course' | 'tableshare' | 'buffet';
+const FOOD_PLANS: Record<FoodPlanType, { ja: string; en: string; minPrice: number; maxPrice: number; defaultPrice: number }> = {
+  course:     { ja: 'コース料理',   en: 'Course Menu',  minPrice: 11000, maxPrice: 19000, defaultPrice: 13000 },
+  tableshare: { ja: 'テーブルシェア', en: 'Table Share',  minPrice: 9000,  maxPrice: 15000, defaultPrice: 11000 },
+  buffet:     { ja: 'ビュッフェ',   en: 'Buffet',       minPrice: 7000,  maxPrice: 12000, defaultPrice: 9000  },
+};
+const VENUE_OPTIONAL_ITEMS = [
+  { id: 'opt_bridal',   ja: 'ブライズ利用料',          en: 'Bridal Room Usage',          minPrice: 30000, maxPrice:  50000, defaultPrice: 35000, isPerGuest: false, unit: '式' },
+  { id: 'opt_attend',   ja: '介添え',                  en: 'Wedding Attendant',          minPrice: 20000, maxPrice:  40000, defaultPrice: 25000, isPerGuest: false, unit: '式' },
+  { id: 'opt_sound',    ja: '音響・照明（オペレーター込み）', en: 'Sound & Lighting (w/ Op.)', minPrice: 50000, maxPrice: 120000, defaultPrice: 60000, isPerGuest: false, unit: '式' },
+  { id: 'opt_staff',    ja: 'スタッフなど',             en: 'Staff Services',             minPrice: 30000, maxPrice:  80000, defaultPrice: 40000, isPerGuest: false, unit: '式' },
+  { id: 'opt_favor',    ja: '引出物（スタンダード）',   en: 'Wedding Favors',             minPrice:  2000, maxPrice:   5000, defaultPrice:  3000, isPerGuest: true,  unit: '個' },
+  { id: 'opt_gift',     ja: 'プチギフト',               en: 'Mini Gift',                  minPrice:   500, maxPrice:   1000, defaultPrice:   700, isPerGuest: true,  unit: '人' },
+];
+const AMORE_STANDARD_PRETAX = 370000;
+const AMORE_STANDARD_INCLUDES = [
+  { ja: 'MC & プランニング', price: 120000 },
+  { ja: '写真 + ビデオ',    price: 120000 },
+  { ja: 'メインテーブル装花', price: 70000 },
+  { ja: 'ヘアメイク',        price: 35000 },
+  { ja: 'Web招待状',        price: 10000 },
+  { ja: '交通費',           price: 15000 },
+];
+const AMORE_ADDON_CONFIG = {
+  dressSecond:         30000,
+  sulyarYitPat:        15000,
+  realBouquet:         { min: 20000, max: 50000 },
+  guestFlowerPerTable: 3500,
+  placingCardPerPerson:250,
+  photoUpgrade:        { min: 30000, max: 50000 },
+  aisleFlower:         { min: 20000, max: 50000 },
+};
+
 // --- TYPES ---
 type TabType = 'setup' | 'catalog' | 'amore' | 'preview';
 type Language = 'en' | 'ja' | 'my';
-type VenueCalcMode = 'detailed' | 'perPerson';
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
@@ -340,8 +373,26 @@ const INITIAL_SERVICES: (Omit<AmoreService, 'name'> & { name: Record<string, str
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('setup');
   const [language, setLanguage] = useState<Language>('en');
-  const [venueCalcMode, setVenueCalcMode] = useState<VenueCalcMode>('perPerson');
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
+
+  // Venue section state
+  const [venuePackagePrice, setVenuePackagePrice] = useState(200000);
+  const [foodPlan, setFoodPlan] = useState<FoodPlanType>('course');
+  const [foodPricePerPerson, setFoodPricePerPerson] = useState(13000);
+  const [drinksIncluded, setDrinksIncluded] = useState(true);
+  const [drinkPricePerPerson, setDrinkPricePerPerson] = useState(3800);
+  const [childCount, setChildCount] = useState(0);
+  const CHILD_PRICE = 3500;
+  const [selectedOptionals, setSelectedOptionals] = useState<Record<string, number>>({});
+
+  // Amore section state
+  const [amoreMode, setAmoreMode] = useState<'standard' | 'custom' | null>(null);
+  const [amoreAddons, setAmoreAddons] = useState({
+    dressCount: 1, sulyarYitPat: false, makeupRehearsal: true,
+    realBouquet: false, guestFlowers: false, placingCards: false,
+    photoUpgrade: false, aisleFlower: false,
+  });
+  const [addonPrices, setAddonPrices] = useState({ realBouquet: 20000, photoUpgrade: 40000, aisleFlower: 30000 });
   const [capturing, setCapturing] = useState(false);
   const [downloadTime, setDownloadTime] = useState<string>('');
   const [showPriceSettings, setShowPriceSettings] = useState(false);
@@ -369,66 +420,32 @@ export default function App() {
     INITIAL_SERVICES.map(s => ({ ...s, name: s.name.en, quantity: s.id === 'amore_guest_fl' ? Math.ceil(60 / 10) : (s.quantity || 1) }))
   );
 
-  const targetBudgetPerPerson = venueInfo.targetBudget ? Math.floor(venueInfo.targetBudget / venueInfo.guestCount) : 0;
-
-  // Sync effective reference price for venue suggestions
-  const packageItemMeta = MENU_CATALOG.find(i => i.id === 'venue_package_per_person');
-  const selectedPkgItem = quoteItems.find(i => i.name === packageItemMeta?.name.en);
-  
-  const currentPriceReference = (activeTab === 'catalog' && venueCalcMode === 'perPerson' && selectedPkgItem) 
-    ? selectedPkgItem.unitPrice 
-    : targetBudgetPerPerson;
-
-  const suggestedVenues = VENUE_LIST.filter(v => v.avgPricePerPerson <= currentPriceReference)
-    .sort((a, b) => b.avgPricePerPerson - a.avgPricePerPerson);
-
+  // Addon questionnaire → service card auto-configuration
   useEffect(() => {
-    if (venueCalcMode === 'perPerson') {
-      const packageItem = MENU_CATALOG.find(i => i.id === 'venue_package_per_person');
-      if (packageItem) {
-        setQuoteItems(prev => {
-           const others = prev.filter(i => 
-             i.category !== QuoteCategory.VENUE_FEE && 
-             i.category !== QuoteCategory.FOOD_DRINK
-           );
-           const exists = others.find(i => i.name === packageItem.name.en);
-           if (exists) return others;
-
-           const newItem: QuoteItem = {
-              id: crypto.randomUUID(),
-              category: QuoteCategory.VENUE_FEE,
-              name: packageItem.name.en,
-              unitPrice: packageItem.unitPrice,
-              quantity: venueInfo.guestCount,
-              isPerGuest: true,
-              minPrice: packageItem.minPrice,
-              maxPrice: packageItem.maxPrice,
-              description: packageItem.info?.[language] || packageItem.info?.en 
-           };
-           return [...others, newItem];
-        });
-      }
-    } else {
-      setQuoteItems(prev => prev.filter(i => i.name !== 'Venue Service Package (Per Person)'));
-    }
-  }, [venueCalcMode, venueInfo.guestCount, language]);
-
-  useEffect(() => {
+    if (amoreMode !== 'custom') return;
     setAmoreServices(prev => prev.map(s => {
-      if (s.id === 'amore_guest_fl') {
-        return { ...s, quantity: Math.ceil(venueInfo.guestCount / 10) };
+      switch (s.id) {
+        case '1':   return { ...s, isSelected: true, minPrice: amoreAddons.sulyarYitPat ? 120000 : 105000, currentPrice: amoreAddons.sulyarYitPat ? Math.max(s.currentPrice, 120000) : s.currentPrice };
+        case '2':   return { ...s, isSelected: true };
+        case 'dress': return { ...s, isSelected: true, minPrice: amoreAddons.dressCount >= 2 ? 55000 : 35000, currentPrice: amoreAddons.dressCount >= 2 ? Math.max(s.currentPrice, 55000) : Math.min(s.currentPrice, 75000) };
+        case 'makeup': return { ...s, isSelected: true, minPrice: amoreAddons.makeupRehearsal ? 35000 : 25000, maxPrice: amoreAddons.makeupRehearsal ? 85000 : 55000 };
+        case 'amore_bouquet': return { ...s, isSelected: amoreAddons.realBouquet, currentPrice: addonPrices.realBouquet };
+        case 'amore_guest_fl': return { ...s, isSelected: amoreAddons.guestFlowers, quantity: Math.ceil(venueInfo.guestCount / 10) };
+        case 'amore_main_fl': return { ...s, isSelected: true, currentPrice: 70000 };
+        case 'webinv':   return { ...s, isSelected: true, currentPrice: amoreAddons.placingCards ? 15000 : 10000 };
+        case 'transport':return { ...s, isSelected: true, currentPrice: 15000 };
+        default: return s;
       }
-      return s;
     }));
-    if (venueCalcMode === 'perPerson') {
-       setQuoteItems(prev => prev.map(i => {
-         if (i.name === 'Venue Service Package (Per Person)') {
-           return { ...i, quantity: venueInfo.guestCount };
-         }
-         return i;
-       }));
+  }, [amoreMode, amoreAddons, addonPrices, venueInfo.guestCount]);
+
+  useEffect(() => {
+    if (amoreMode === 'standard') {
+      setAmoreServices(prev => prev.map(s => ({ ...s, isSelected: ['1','2','amore_main_fl','makeup','webinv','transport'].includes(s.id) })));
+    } else if (amoreMode === null) {
+      setAmoreServices(prev => prev.map(s => ({ ...s, isSelected: false })));
     }
-  }, [venueInfo.guestCount]);
+  }, [amoreMode]);
 
   const t = TRANSLATIONS[language];
 
@@ -578,43 +595,23 @@ export default function App() {
     ));
   };
 
-  const selectVenue = (venue: VenueSuggestion) => {
-    setVenueInfo(prev => ({ ...prev, name: venue.name }));
-    setVenueCalcMode('perPerson');
-    
-    const packageItem = MENU_CATALOG.find(i => i.id === 'venue_package_per_person');
-    if (packageItem) {
-      setQuoteItems(prev => {
-        const others = prev.filter(i => 
-          i.category !== QuoteCategory.VENUE_FEE && 
-          i.category !== QuoteCategory.FOOD_DRINK
-        );
-        
-        const newItem: QuoteItem = {
-          id: crypto.randomUUID(),
-          category: QuoteCategory.VENUE_FEE,
-          name: packageItem.name.en,
-          unitPrice: venue.avgPricePerPerson, 
-          quantity: venueInfo.guestCount,
-          isPerGuest: true,
-          minPrice: packageItem.minPrice,
-          maxPrice: packageItem.maxPrice,
-          description: venue.description[language] || venue.description.en
-        };
-        return [...others, newItem];
-      });
-    }
+  // ── Totals ──
+  const venueFoodTotal  = foodPricePerPerson * venueInfo.guestCount;
+  const venueDrinkTotal = drinksIncluded ? drinkPricePerPerson * venueInfo.guestCount : 0;
+  const venueChildTotal = CHILD_PRICE * childCount;
+  const venueOptTotal   = Object.entries(selectedOptionals).reduce((sum, [id, price]: [string, number]) => {
+    const item = VENUE_OPTIONAL_ITEMS.find(i => i.id === id);
+    return item ? sum + (item.isPerGuest ? price * venueInfo.guestCount : price) : sum;
+  }, 0);
+  const venueSubtotal = venuePackagePrice + venueFoodTotal + venueDrinkTotal + venueChildTotal + venueOptTotal;
 
-    const manualSelector = document.getElementById('venue-package-selector');
-    if (manualSelector) {
-        manualSelector.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const venueSubtotal = quoteItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-  const amoreSubtotal = amoreServices
-    .filter(s => s.isSelected)
-    .reduce((sum, s) => sum + (s.currentPrice * (s.quantity || 1)), 0);
+  let amoreSubtotal = 0;
+  if (amoreMode === 'standard') {
+    amoreSubtotal = AMORE_STANDARD_PRETAX;
+  } else if (amoreMode === 'custom') {
+    amoreSubtotal = amoreServices.filter(s => s.isSelected).reduce((sum, s) => sum + s.currentPrice * (s.quantity || 1), 0);
+    if (amoreAddons.aisleFlower) amoreSubtotal += addonPrices.aisleFlower;
+  }
   
   const subtotalBeforeTax = venueSubtotal + amoreSubtotal;
   const taxAmount = Math.floor(subtotalBeforeTax * venueInfo.taxRate);
@@ -622,41 +619,9 @@ export default function App() {
   
   const isOverBudget = venueInfo.targetBudget ? grandTotal > venueInfo.targetBudget : false;
   const budgetUsage = venueInfo.targetBudget ? (grandTotal / venueInfo.targetBudget) * 100 : 0;
+  const targetBudgetPerPerson = venueInfo.targetBudget && venueInfo.guestCount > 0 ? Math.round(venueInfo.targetBudget / venueInfo.guestCount) : 0;
 
-  const groupedFinalItems = Object.values(QuoteCategory).reduce((acc, category) => {
-    const venueItemsInCat = quoteItems.filter(i => i.category === category);
-    
-    const amoreInCategory = amoreServices.filter(s => {
-      if (!s.isSelected) return false;
-      const original = INITIAL_SERVICES.find(init => init.id === s.id);
-      const name = original?.name.en.toLowerCase() || "";
-      
-      if (category === QuoteCategory.ATTIRE_BEAUTY) return name.includes('makeup') || name.includes('hair') || name.includes('dress') || name.includes('suit');
-      if (category === QuoteCategory.FLORAL_DECOR) return name.includes('flower') || name.includes('bouquet') || name.includes('decoration');
-      if (category === QuoteCategory.PHOTO_VIDEO) return name.includes('photo') || name.includes('video');
-      if (category === QuoteCategory.ENTERTAINMENT) return name.includes('mc') || name.includes('planning');
-      if (category === QuoteCategory.OTHER) {
-         const isMatchedElsewhere = (
-           name.includes('makeup') || name.includes('hair') || name.includes('dress') || name.includes('suit') ||
-           name.includes('flower') || name.includes('bouquet') || name.includes('photo') || name.includes('video') ||
-           name.includes('mc') || name.includes('planning')
-         );
-         return !isMatchedElsewhere || name.includes('invitation') || name.includes('transport');
-      }
-      return false;
-    });
-
-    acc[category] = { venue: venueItemsInCat, amore: amoreInCategory };
-    return acc;
-  }, {} as Record<string, { venue: QuoteItem[], amore: AmoreService[] }>);
-
-  const catalogByCategory = MENU_CATALOG.reduce((acc, item) => {
-    if (item.id === 'venue_package_per_person') return acc; 
-    const cat = item.category === 'Plan' ? QuoteCategory.VENUE_FEE : item.category as QuoteCategory;
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {} as Record<string, CatalogItem[]>);
+  const selectedAmoreServices = amoreServices.filter(s => s.isSelected);
 
   const steps = [
     { id: 'setup', label: t.step1, icon: <Wallet size={16}/> },
@@ -741,339 +706,410 @@ export default function App() {
            </section>
         </div>
 
-        <div className={activeTab === 'catalog' ? 'block space-y-12 animate-in slide-in-from-bottom-4' : 'hidden'}>
-           <header className="text-center max-w-2xl mx-auto space-y-4">
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">{t.menuBook}</h2>
-              <p className="text-gray-500 text-sm sm:text-base">{t.menuBookDesc}</p>
+        <div className={activeTab === 'catalog' ? 'block space-y-8 animate-in slide-in-from-bottom-4' : 'hidden'}>
+           <header className="text-center max-w-2xl mx-auto space-y-2">
+             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">会場費用</h2>
+             <p className="text-gray-500 text-sm">Venue Cost Setup</p>
            </header>
 
-           <div id="manual-venue-selector" className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-              <button 
-                onClick={() => setVenueCalcMode('perPerson')}
-                className={`flex flex-col items-center gap-4 p-6 sm:p-8 rounded-3xl border-2 transition-all ${venueCalcMode === 'perPerson' ? 'bg-white border-amore-500 shadow-xl ring-4 ring-rose-50' : 'bg-gray-50 border-gray-100 hover:border-amore-200'}`}
-              >
-                 <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-colors ${venueCalcMode === 'perPerson' ? 'bg-amore-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                    <Users size={28} />
+           {/* ── Section 1: Venue Package ── */}
+           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 sm:p-10 space-y-6">
+             <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
+               <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">1</div>
+               <div>
+                 <h3 className="font-bold text-gray-900">会場パッケージ料金</h3>
+                 <p className="text-xs text-gray-400">Venue Package Fee — パッケージプラン（固定費）</p>
+               </div>
+             </div>
+             <div className="bg-gray-50 rounded-[1.5rem] p-6 space-y-4">
+               <div className="flex justify-between items-baseline">
+                 <span className="text-xs font-black uppercase text-gray-400 tracking-widest">会場使用料</span>
+                 <div className="text-right">
+                   <div className="text-3xl font-serif font-bold text-amore-600">¥{venuePackagePrice.toLocaleString()}</div>
+                   <div className="text-[10px] text-gray-400 uppercase font-black">1式</div>
                  </div>
-                 <div className="text-center">
-                    <span className="block font-bold text-base sm:text-lg">{t.calcModePerPerson}</span>
-                    <span className="text-xs text-gray-500">{t.calcModePerPersonDesc}</span>
-                 </div>
-              </button>
-
-              <button 
-                onClick={() => setVenueCalcMode('detailed')}
-                className={`flex flex-col items-center gap-4 p-6 sm:p-8 rounded-3xl border-2 transition-all ${venueCalcMode === 'detailed' ? 'bg-white border-amore-500 shadow-xl ring-4 ring-rose-50' : 'bg-gray-50 border-gray-100 hover:border-amore-200'}`}
-              >
-                 <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-colors ${venueCalcMode === 'detailed' ? 'bg-amore-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                    <ListChecks size={28} />
-                 </div>
-                 <div className="text-center">
-                    <span className="block font-bold text-base sm:text-lg">{t.calcModeDetailed}</span>
-                    <span className="text-xs text-gray-500">{t.calcModeDetailedDesc}</span>
-                 </div>
-              </button>
+               </div>
+               <input type="range" min={150000} max={300000} step={5000} value={venuePackagePrice}
+                 onChange={e => setVenuePackagePrice(Number(e.target.value))}
+                 className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+               <div className="flex justify-between text-xs text-gray-400 font-mono">
+                 <span>¥150,000</span><span>¥300,000</span>
+               </div>
+             </div>
+             <p className="text-xs text-gray-400 italic">※ 会場によって異なります。実際の見積は直接会場にご確認ください。</p>
            </div>
-           
-           {venueCalcMode === 'perPerson' ? (
-             <div className="space-y-16">
-                <div id="venue-package-selector" className="max-w-2xl mx-auto animate-in fade-in zoom-in-95">
-                    {(() => {
-                       const packageItem = MENU_CATALOG.find(i => i.id === 'venue_package_per_person');
-                       const selectedPkg = quoteItems.find(i => i.name === packageItem?.name.en);
-                       if (!packageItem) return null;
-                       return (
-                         <div className="bg-white p-6 sm:p-10 rounded-[3rem] border border-gray-100 shadow-xl space-y-8">
-                            <div className="flex justify-between items-center">
-                               <h3 className="font-serif text-xl sm:text-2xl font-bold">{packageItem.name[language]}</h3>
-                               <Info className="text-gray-300" size={20} />
-                            </div>
-                            <p className="text-sm text-gray-500 leading-relaxed italic border-l-4 border-amore-200 pl-4">{packageItem.info?.[language]}</p>
-                            
-                            <div className="bg-gray-50 p-6 sm:p-8 rounded-[2rem] space-y-6">
-                               <div className="flex justify-between items-baseline">
-                                  <span className="text-xs font-black uppercase text-gray-400 tracking-widest">{t.qualityVolume}</span>
-                                  <div className="text-right">
-                                     <div className="text-3xl sm:text-4xl font-serif font-bold text-amore-600">¥{selectedPkg?.unitPrice.toLocaleString()}</div>
-                                     <div className="text-[10px] text-gray-400 uppercase font-black">Per Person</div>
-                                  </div>
-                               </div>
-                               <input 
-                                 type="range" 
-                                 min={packageItem.minPrice} 
-                                 max={packageItem.maxPrice} 
-                                 step={500} 
-                                 value={selectedPkg?.unitPrice || packageItem.minPrice}
-                                 onChange={(e) => updateItemPrice(packageItem.name.en, parseInt(e.target.value))}
-                                 className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500"
-                               />
-                               <div className="flex justify-between text-xs text-gray-400 font-mono">
-                                  <span>¥{packageItem.minPrice?.toLocaleString()}</span>
-                                  <span>¥{packageItem.maxPrice?.toLocaleString()}</span>
-                               </div>
-                            </div>
 
-                            <div className="flex justify-between items-center pt-4 border-t border-gray-50">
-                               <div className="text-gray-400 text-xs font-medium">Estimated Venue Subtotal:</div>
-                               <div className="text-xl sm:text-2xl font-serif font-bold text-gray-900">¥{((selectedPkg?.unitPrice || 0) * venueInfo.guestCount).toLocaleString()}</div>
-                            </div>
-                         </div>
-                       );
-                    })()}
-                </div>
+           {/* ── Section 2: Food & Drink ── */}
+           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 sm:p-10 space-y-6">
+             <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
+               <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">2</div>
+               <div>
+                 <h3 className="font-bold text-gray-900">料理・飲み物</h3>
+                 <p className="text-xs text-gray-400">Food & Drink — ゲスト人数に連動</p>
+               </div>
+             </div>
+             {/* Food plan selector */}
+             <div className="space-y-4">
+               <p className="text-xs font-black uppercase text-gray-400 tracking-widest">料理プラン</p>
+               <div className="grid grid-cols-3 gap-3">
+                 {(Object.keys(FOOD_PLANS) as FoodPlanType[]).map(plan => (
+                   <button key={plan} onClick={() => { setFoodPlan(plan); setFoodPricePerPerson(FOOD_PLANS[plan].defaultPrice); }}
+                     className={`py-3 px-2 rounded-2xl border-2 text-center transition-all ${foodPlan === plan ? 'bg-white border-amore-500 shadow-md text-amore-700' : 'bg-gray-50 border-gray-100 text-gray-500 hover:border-amore-200'}`}>
+                     <div className="font-bold text-xs">{FOOD_PLANS[plan].ja}</div>
+                     <div className="text-[10px] text-gray-400 mt-0.5">¥{FOOD_PLANS[plan].minPrice.toLocaleString()}~</div>
+                   </button>
+                 ))}
+               </div>
+               <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                 <div className="flex justify-between items-baseline">
+                   <span className="text-xs text-gray-500">{FOOD_PLANS[foodPlan].ja} / 人</span>
+                   <span className="font-mono font-bold text-amore-600">¥{foodPricePerPerson.toLocaleString()} × {venueInfo.guestCount} = ¥{(foodPricePerPerson * venueInfo.guestCount).toLocaleString()}</span>
+                 </div>
+                 <input type="range" min={FOOD_PLANS[foodPlan].minPrice} max={FOOD_PLANS[foodPlan].maxPrice} step={500}
+                   value={foodPricePerPerson} onChange={e => setFoodPricePerPerson(Number(e.target.value))}
+                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                 <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                   <span>¥{FOOD_PLANS[foodPlan].minPrice.toLocaleString()}</span><span>¥{FOOD_PLANS[foodPlan].maxPrice.toLocaleString()}</span>
+                 </div>
+               </div>
+             </div>
+             {/* Drinks */}
+             <div className="space-y-3">
+               <div className="flex items-center justify-between">
+                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">フリードリンク</p>
+                 <button onClick={() => setDrinksIncluded(p => !p)}
+                   className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${drinksIncluded ? 'bg-amore-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                   {drinksIncluded ? '含む' : '含まない'}
+                 </button>
+               </div>
+               {drinksIncluded && (
+                 <div className="bg-gray-50 rounded-2xl p-4 space-y-3 animate-in zoom-in-95">
+                   <div className="flex justify-between">
+                     <span className="text-xs text-gray-500">フリードリンク / 人</span>
+                     <span className="font-mono font-bold text-amore-600">¥{drinkPricePerPerson.toLocaleString()} × {venueInfo.guestCount} = ¥{(drinkPricePerPerson * venueInfo.guestCount).toLocaleString()}</span>
+                   </div>
+                   <input type="range" min={2500} max={5000} step={100} value={drinkPricePerPerson}
+                     onChange={e => setDrinkPricePerPerson(Number(e.target.value))}
+                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                   <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                     <span>¥2,500</span><span>¥5,000</span>
+                   </div>
+                 </div>
+               )}
+             </div>
+             {/* Children */}
+             <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-4">
+               <div>
+                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">お子様</p>
+                 <p className="text-[10px] text-gray-400 mt-0.5">¥{CHILD_PRICE.toLocaleString()} / 人</p>
+               </div>
+               <div className="flex items-center gap-3">
+                 <button onClick={() => setChildCount(p => Math.max(0, p-1))} className="p-1.5 rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-gray-100"><Minus size={14} /></button>
+                 <span className="text-lg font-mono font-bold w-6 text-center">{childCount}</span>
+                 <button onClick={() => setChildCount(p => p+1)} className="p-1.5 rounded-lg bg-white border border-gray-200 text-gray-500 hover:bg-gray-100"><Plus size={14} /></button>
+               </div>
+             </div>
+             <div className="flex justify-between items-center border-t border-gray-100 pt-3">
+               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Section 2 小計</span>
+               <span className="font-mono font-bold text-gray-900">¥{(venueFoodTotal + venueDrinkTotal + venueChildTotal).toLocaleString()}</span>
+             </div>
+           </div>
 
-                {(venueInfo.targetBudget || venueCalcMode === 'perPerson') && (
-                  <div className="max-w-7xl mx-auto space-y-8 animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-gray-100 pb-4 gap-4">
+           {/* ── Section 3: Optional items ── */}
+           <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 sm:p-10 space-y-6">
+             <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
+               <div className="w-7 h-7 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-black">3</div>
+               <div>
+                 <h3 className="font-bold text-gray-900">オプション項目</h3>
+                 <p className="text-xs text-gray-400">Optional Items (品目マスタ) — 必要に応じて追加</p>
+               </div>
+             </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               {VENUE_OPTIONAL_ITEMS.map(item => {
+                 const isSelected = item.id in selectedOptionals;
+                 const currentPrice = selectedOptionals[item.id] ?? item.defaultPrice;
+                 const effectiveTotal = item.isPerGuest ? currentPrice * venueInfo.guestCount : currentPrice;
+                 return (
+                   <div key={item.id} className={`rounded-2xl border-2 transition-all overflow-hidden ${isSelected ? 'border-amore-300 bg-white shadow-sm' : 'border-gray-100 bg-gray-50'}`}>
+                     <div className="p-4 flex items-center justify-between">
                        <div>
-                          <h3 className="text-2xl font-serif font-bold text-gray-900">{t.recommendedVenues}</h3>
-                          <p className="text-sm text-gray-500 mt-1">{t.recommendedVenuesDesc}{currentPriceReference.toLocaleString()} {t.perPerson})</p>
+                         <div className="font-medium text-sm text-gray-800">{item.ja}</div>
+                         <div className="text-[10px] text-gray-400 mt-0.5">{item.isPerGuest ? `¥${item.minPrice.toLocaleString()}–¥${item.maxPrice.toLocaleString()} / ${item.unit}` : `¥${item.minPrice.toLocaleString()}–¥${item.maxPrice.toLocaleString()}`}</div>
                        </div>
-                    </div>
-
-                    <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-start gap-3">
-                       <Info className="text-amore-500 shrink-0 mt-0.5" size={18} />
-                       <p className="text-amore-800 text-sm font-medium leading-relaxed italic">
-                         {t.venuePackageNote}
-                       </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                       {suggestedVenues.length > 0 ? (
-                         suggestedVenues.map((venue, idx) => (
-                           <div key={venue.id} className="group relative bg-white border border-gray-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                              {idx === 0 && (
-                                <div className="absolute -top-3 -right-3 bg-amber-400 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg z-10 uppercase tracking-widest flex items-center gap-1">
-                                  <Star size={10} fill="currentColor" /> Best Match
-                                </div>
-                              )}
-                              <div className="flex items-start justify-between mb-4">
-                                 <div className="space-y-1">
-                                    <h4 className="font-serif text-xl font-bold group-hover:text-amore-600 transition-colors">{venue.name}</h4>
-                                    <div className="flex items-center gap-1 text-gray-400 text-xs">
-                                       <MapPin size={12} /> {venue.location}
-                                    </div>
-                                 </div>
-                                 <div className="text-right">
-                                    <div className="text-amore-600 font-mono font-bold text-lg">¥{venue.avgPricePerPerson.toLocaleString()}</div>
-                                    <div className="text-[8px] text-gray-400 uppercase font-black tracking-tighter">{t.perPerson}</div>
-                                 </div>
-                              </div>
-                              <p className="text-xs text-gray-500 italic mb-6 leading-relaxed border-l-2 border-amore-50 pl-3 line-clamp-3">
-                                 {venue.description[language]}
-                              </p>
-                              <button 
-                                onClick={() => selectVenue(venue)}
-                                className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${venueInfo.name === venue.name ? 'bg-amore-50 text-amore-600 border border-amore-200' : 'bg-gray-900 text-white hover:bg-black'}`}
-                              >
-                                {venueInfo.name === venue.name ? <><CheckCircle2 size={14} /> {t.selected}</> : <><MousePointer2 size={14} /> {t.selectVenue}</>}
-                              </button>
-                           </div>
-                         ))
-                       ) : (
-                         <div className="col-span-full py-12 text-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-                            <p className="text-gray-400 font-medium italic">No venues found matching this budget range.</p>
-                         </div>
-                       )}
-                    </div>
-                  </div>
-                )}
-             </div>
-           ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {Object.entries(catalogByCategory).map(([category, items]) => (
-                  <div key={category} className="space-y-6">
-                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 pb-2">{t.categories[category]}</h3>
-                     <div className="space-y-4">
-                        {items.map(item => {
-                          const itemNameEn = item.name.en;
-                          const selectedItem = quoteItems.find(i => i.name === itemNameEn);
-                          const isSelected = !!selectedItem;
-                          const isExpanded = expandedInfo === item.id;
-                          return (
-                            <div key={item.id} className={`rounded-[1.5rem] border-2 transition-all overflow-hidden flex flex-col ${isSelected ? 'bg-white border-amore-500 shadow-md' : 'bg-white border-gray-100'}`}>
-                              <div className="p-5 flex-1">
-                                 <div className="flex justify-between items-start mb-2">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                         <span className={`font-bold text-sm ${isSelected ? 'text-amore-600' : 'text-gray-800'}`}>{item.name[language]}</span>
-                                         <button onClick={() => setExpandedInfo(isExpanded ? null : item.id)} className="text-gray-300 hover:text-amore-400 transition-colors">
-                                            <HelpCircle size={14} />
-                                         </button>
-                                      </div>
-                                      <div className="text-[10px] text-gray-400 font-mono mt-1">
-                                        {item.minPrice ? `¥${item.minPrice.toLocaleString()} - ¥${item.maxPrice?.toLocaleString()}` : `¥${item.unitPrice.toLocaleString()}`}
-                                      </div>
-                                    </div>
-                                    <button onClick={() => toggleCatalogItem(item)} className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isSelected ? 'bg-amore-500 border-amore-500 text-white' : 'bg-gray-50 border-gray-200 text-gray-300'}`}>
-                                       {isSelected ? <Check size={18} /> : <Plus size={18} />}
-                                    </button>
-                                 </div>
-                                 {isSelected && item.minPrice && (
-                                   <div className="mt-4 px-2 py-4 bg-gray-50 rounded-2xl">
-                                      <div className="flex justify-between text-[9px] font-black uppercase text-gray-400 mb-2">
-                                         <span>{t.qualityVolume}</span>
-                                         <span className="text-amore-600">¥{selectedItem?.unitPrice.toLocaleString()}</span>
-                                      </div>
-                                      <input 
-                                        type="range" 
-                                        min={item.minPrice} 
-                                        max={item.maxPrice} 
-                                        step={100} 
-                                        value={selectedItem?.unitPrice || item.minPrice}
-                                        onChange={(e) => updateItemPrice(itemNameEn, parseInt(e.target.value))}
-                                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500"
-                                      />
-                                      <div className="flex justify-between text-[8px] text-gray-300 mt-1 font-mono">
-                                        <span>¥{item.minPrice.toLocaleString()}</span>
-                                        <span>¥{item.maxPrice?.toLocaleString()}</span>
-                                      </div>
-                                   </div>
-                                 )}
-                                 {isSelected && item.allowQtyEdit && (
-                                    <div className="mt-4 flex items-center justify-between bg-gray-50 rounded-2xl p-3">
-                                       <span className="text-[10px] font-black uppercase text-gray-400">{t.quantity}</span>
-                                       <div className="flex items-center gap-4">
-                                          <button onClick={() => updateItemQty(itemNameEn, -1)} className="text-amore-600 bg-white p-1 rounded-md shadow-sm border border-gray-100"><Minus size={12} /></button>
-                                          <span className="text-xs font-bold font-mono">{selectedItem?.quantity}</span>
-                                          <button onClick={() => updateItemQty(itemNameEn, 1)} className="text-amore-600 bg-white p-1 rounded-md shadow-sm border border-gray-100"><Plus size={12} /></button>
-                                       </div>
-                                    </div>
-                                 )}
-                              </div>
-                              {isExpanded && (
-                                <div className="px-5 pb-5 bg-white border-t border-gray-50">
-                                   <p className="text-[11px] text-gray-500 leading-relaxed mt-4 italic">{item.info?.[language] || item.info?.['en']}</p>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                       <button onClick={() => setSelectedOptionals(prev => {
+                         if (isSelected) { const n = {...prev}; delete n[item.id]; return n; }
+                         return {...prev, [item.id]: item.defaultPrice};
+                       })} className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${isSelected ? 'bg-amore-500 border-amore-500 text-white' : 'bg-white border-gray-200 text-gray-300 hover:border-amore-300'}`}>
+                         {isSelected ? <Check size={14} /> : <Plus size={14} />}
+                       </button>
                      </div>
-                  </div>
-                ))}
+                     {isSelected && (
+                       <div className="px-4 pb-4 space-y-2 animate-in zoom-in-95">
+                         <div className="flex justify-between text-xs">
+                           <span className="text-gray-500">{item.isPerGuest ? `¥${currentPrice.toLocaleString()} × ${venueInfo.guestCount}` : `¥${currentPrice.toLocaleString()}`}</span>
+                           <span className="font-mono font-bold text-amore-600">= ¥{effectiveTotal.toLocaleString()}</span>
+                         </div>
+                         <input type="range" min={item.minPrice} max={item.maxPrice} step={item.isPerGuest ? 100 : 1000}
+                           value={currentPrice} onChange={e => setSelectedOptionals(prev => ({...prev, [item.id]: Number(e.target.value)}))}
+                           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                         <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                           <span>¥{item.minPrice.toLocaleString()}</span><span>¥{item.maxPrice.toLocaleString()}</span>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 );
+               })}
              </div>
-           )}
+           </div>
 
-           <div className="flex justify-center pt-8 border-t border-gray-100">
+           <div className="flex justify-center pt-4 border-t border-gray-100">
               <button onClick={() => setActiveTab('amore')} className="bg-gray-900 text-white px-8 sm:px-12 py-4 sm:py-5 rounded-2xl font-bold flex items-center gap-3 hover:bg-black transition-all shadow-xl group">
                  {t.nextStepAmore} <ChevronRight className="group-hover:translate-x-1 transition-transform" />
               </button>
            </div>
         </div>
 
-        <div className={activeTab === 'amore' ? 'block space-y-12 animate-in' : 'hidden'}>
+
+
+        <div className={activeTab === 'amore' ? 'block space-y-10 animate-in' : 'hidden'}>
            <header className="text-center max-w-2xl mx-auto">
-              <div className="flex items-center justify-center gap-3">
-                <h2 className="text-3xl sm:text-4xl font-serif font-bold">Amore Specialized Services</h2>
-                {isAdmin && (
-                  <button
-                    onClick={() => setShowPriceSettings(true)}
-                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-amore-100 text-gray-500 hover:text-amore-600 transition-colors"
-                    title="品目マスタ 価格設定"
-                  >
-                    <Settings size={18} />
-                  </button>
-                )}
-              </div>
-              <p className="text-gray-500 mt-2 text-sm sm:text-base">Personalize your wedding with our premium support options.</p>
+             <div className="flex items-center justify-center gap-3">
+               <h2 className="text-3xl sm:text-4xl font-serif font-bold">Amore サービス</h2>
+               {isAdmin && (
+                 <button onClick={() => setShowPriceSettings(true)}
+                   className="p-2.5 rounded-xl bg-gray-100 hover:bg-amore-100 text-gray-500 hover:text-amore-600 transition-colors"
+                   title="品目マスタ 価格設定">
+                   <Settings size={18} />
+                 </button>
+               )}
+             </div>
+             <p className="text-gray-500 mt-2 text-sm">Choose how to configure Amore services.</p>
            </header>
-           
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-              {amoreServices.map(service => {
-                const isSelected = service.isSelected;
-                const isExpanded = expandedInfo === service.id;
-                const localizedName = getServiceName(service.id);
-                const original = INITIAL_SERVICES.find(s => s.id === service.id);
-                const isPerTableItem = service.id === 'amore_guest_fl';
 
-                return (
-                  <div key={service.id} className={`group relative flex flex-col rounded-[2.5rem] border-2 transition-all duration-300 ${isSelected ? 'bg-white border-amore-500 shadow-[0_20px_50px_rgba(244,63,94,0.1)] ring-1 ring-amore-100' : 'bg-white border-gray-100 hover:border-amore-200 shadow-sm hover:shadow-md'}`}>
-                    <div className="p-6 sm:p-8 flex-1">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${isSelected ? 'bg-amore-100 text-amore-600' : 'bg-gray-100 text-gray-400'}`}>
-                          {isSelected ? t.included : t.notIncluded}
-                        </div>
-                        <button onClick={() => setExpandedInfo(isExpanded ? null : service.id)} className="text-gray-300 hover:text-amore-500 transition-colors">
-                          <HelpCircle size={20} />
-                        </button>
-                      </div>
+           {/* ── Mode selector ── */}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+             {/* Standard package card */}
+             <button onClick={() => setAmoreMode(amoreMode === 'standard' ? null : 'standard')}
+               className={`relative flex flex-col items-start gap-4 p-6 sm:p-8 rounded-3xl border-2 text-left transition-all ${amoreMode === 'standard' ? 'bg-white border-amore-500 shadow-xl ring-4 ring-rose-50' : 'bg-gray-50 border-gray-100 hover:border-amore-200'}`}>
+               {amoreMode === 'standard' && <div className="absolute top-3 right-3 w-6 h-6 bg-amore-500 rounded-full flex items-center justify-center"><Check size={12} className="text-white" /></div>}
+               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${amoreMode === 'standard' ? 'bg-amore-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                 <Award size={28} />
+               </div>
+               <div>
+                 <div className="font-bold text-lg text-gray-900">スタンダードパッケージ</div>
+                 <div className="text-3xl font-serif font-bold text-amore-600 mt-1">¥407,000 <span className="text-sm text-gray-400 font-normal">税込</span></div>
+                 <div className="text-xs text-gray-400 mt-1">¥{AMORE_STANDARD_PRETAX.toLocaleString()} + 税</div>
+               </div>
+               <div className="flex flex-wrap gap-1.5 w-full">
+                 {AMORE_STANDARD_INCLUDES.map(inc => (
+                   <span key={inc.ja} className="text-[10px] bg-amore-50 border border-amore-100 text-amore-700 rounded-full px-2 py-0.5 font-medium">
+                     {inc.ja} ¥{inc.price.toLocaleString()}
+                   </span>
+                 ))}
+               </div>
+             </button>
 
-                      <h3 className={`font-serif text-lg sm:text-xl font-bold mb-4 leading-tight transition-colors ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>
-                        {localizedName}
-                      </h3>
-
-                      {isSelected && (
-                        <div className="mt-4 px-4 py-6 bg-gray-50 rounded-[2rem] animate-in zoom-in-95 space-y-4">
-                           <div>
-                              <div className="flex justify-between text-[10px] font-black uppercase text-gray-400 mb-3 tracking-widest">
-                                 <span>{t.qualityVolume}</span>
-                                 <span className="text-amore-600 font-mono text-sm">¥{service.currentPrice.toLocaleString()} {isPerTableItem ? '/ ' + t.table : ''}</span>
-                              </div>
-                              <input 
-                                type="range" 
-                                min={service.minPrice} 
-                                max={service.maxPrice} 
-                                step={5000} 
-                                value={service.currentPrice}
-                                onChange={(e) => updateAmorePrice(service.id, parseInt(e.target.value))}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500 mb-2"
-                              />
-                              <div className="flex justify-between text-[9px] text-gray-400 font-mono">
-                                <span>¥{service.minPrice.toLocaleString()}</span>
-                                <span>¥{service.maxPrice.toLocaleString()}</span>
-                              </div>
-                           </div>
-                           
-                           {['1', 'amore_main_fl', '2', 'dress', 'makeup'].includes(service.id) && (
-                              <div className="text-center text-xs text-amore-700 font-semibold bg-amore-100/70 p-3 rounded-lg border border-amore-100 italic">
-                                {getAmoreOptionText(service)}
-                              </div>
-                           )}
-
-                           {isSelected && isPerTableItem && (
-                              <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                                 <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t.table} Count</span>
-                                 <div className="flex items-center gap-4">
-                                    <button onClick={() => updateAmoreQty(service.id, -1)} className="text-amore-600 bg-white p-2 rounded-xl shadow-sm border border-gray-100 hover:bg-rose-50"><Minus size={14} /></button>
-                                    <span className="text-lg font-bold font-mono">{service.quantity || 1}</span>
-                                    <button onClick={() => updateAmoreQty(service.id, 1)} className="text-amore-600 bg-white p-2 rounded-xl shadow-sm border border-gray-100 hover:bg-rose-50"><Plus size={14} /></button>
-                                 </div>
-                              </div>
-                           )}
-                        </div>
-                      )}
-
-                      {!isSelected && (
-                         <div className="text-xl font-mono font-bold text-gray-300 mb-6">
-                            ¥{service.minPrice.toLocaleString()} ~
-                         </div>
-                      )}
-
-                      {isExpanded && (
-                        <div className="mt-6 p-4 bg-rose-50/50 rounded-2xl animate-in slide-in-from-top-2 border border-rose-100">
-                           <p className="text-xs text-gray-600 leading-relaxed italic">{original?.info?.[language] || original?.info?.en}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-4 bg-gray-50/50 rounded-b-[2.5rem] border-t border-gray-100">
-                      <button 
-                        onClick={() => toggleAmoreService(service.id)}
-                        className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${isSelected ? 'bg-white border border-rose-200 text-rose-500 hover:bg-rose-50' : 'bg-gray-900 text-white hover:bg-black shadow-lg'}`}
-                      >
-                        {isSelected ? <><X size={18} />{t.removeFromEstimate}</> : <><Plus size={18} />{t.addToEstimate}</>}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+             {/* Custom card */}
+             <button onClick={() => setAmoreMode(amoreMode === 'custom' ? null : 'custom')}
+               className={`relative flex flex-col items-start gap-4 p-6 sm:p-8 rounded-3xl border-2 text-left transition-all ${amoreMode === 'custom' ? 'bg-white border-amore-500 shadow-xl ring-4 ring-rose-50' : 'bg-gray-50 border-gray-100 hover:border-amore-200'}`}>
+               {amoreMode === 'custom' && <div className="absolute top-3 right-3 w-6 h-6 bg-amore-500 rounded-full flex items-center justify-center"><Check size={12} className="text-white" /></div>}
+               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${amoreMode === 'custom' ? 'bg-amore-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                 <ListChecks size={28} />
+               </div>
+               <div>
+                 <div className="font-bold text-lg text-gray-900">カスタム選択</div>
+                 <div className="text-sm text-gray-500 mt-1">個別サービスを選択してカスタマイズ</div>
+                 <div className="text-sm text-gray-400">Custom individual services</div>
+               </div>
+             </button>
            </div>
 
-           <div className="flex justify-center pt-12">
-              <button onClick={() => setActiveTab('preview')} className="bg-amore-600 text-white px-12 sm:px-16 py-5 sm:py-6 rounded-3xl font-serif text-xl sm:text-2xl font-bold flex items-center gap-4 hover:bg-amore-700 hover:scale-105 transition-all shadow-2xl shadow-amore-200 group">
-                 {t.generateSummary} <ChevronRight className="group-hover:translate-x-2 transition-transform" />
-              </button>
+           {/* ── Custom mode: questionnaire + auto-configured cards ── */}
+           {amoreMode === 'custom' && (
+             <div className="space-y-8 animate-in fade-in">
+               {/* Questionnaire */}
+               <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 sm:p-10 space-y-0 divide-y divide-gray-50">
+                 <div className="flex items-center gap-3 pb-5">
+                   <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">Q</div>
+                   <div>
+                     <h3 className="font-bold text-gray-900">サービス構成を選択</h3>
+                     <p className="text-xs text-gray-400">Answer to auto-configure prices below</p>
+                   </div>
+                 </div>
+
+                 {/* Dress count */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">ドレスの数</div><div className="text-[10px] text-gray-400">2着目 +¥{AMORE_ADDON_CONFIG.dressSecond.toLocaleString()}</div></div>
+                   <div className="flex gap-2">
+                     {([1,2] as const).map(n => (
+                       <button key={n} onClick={() => setAmoreAddons(p => ({...p, dressCount: n}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.dressCount === n ? 'bg-amore-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {n}着{n===2?'+':''}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Sulryar Yit Pat */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">スリャーイッパ</div><div className="text-[10px] text-gray-400">ミャンマー伝統式 +¥{AMORE_ADDON_CONFIG.sulyarYitPat.toLocaleString()}</div></div>
+                   <div className="flex gap-2">
+                     {([true,false] as const).map(v => (
+                       <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, sulyarYitPat: v}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.sulyarYitPat===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {v?'あり':'なし'}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Makeup rehearsal */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">ヘアメイクリハーサル</div><div className="text-[10px] text-gray-400">Makeup rehearsal included</div></div>
+                   <div className="flex gap-2">
+                     {([true,false] as const).map(v => (
+                       <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, makeupRehearsal: v}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.makeupRehearsal===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {v?'含む':'含まない'}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Real bouquet */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">生花ブーケ</div><div className="text-[10px] text-gray-400">¥{AMORE_ADDON_CONFIG.realBouquet.min.toLocaleString()}–¥{AMORE_ADDON_CONFIG.realBouquet.max.toLocaleString()}</div></div>
+                   <div className="flex gap-2">
+                     {([true,false] as const).map(v => (
+                       <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, realBouquet: v}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.realBouquet===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {v?'あり':'なし'}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+                 {amoreAddons.realBouquet && (
+                   <div className="pb-4 pt-1 space-y-2 animate-in zoom-in-95">
+                     <div className="flex justify-between text-xs"><span className="text-gray-500">生花ブーケ</span><span className="font-mono font-bold text-amore-600">¥{addonPrices.realBouquet.toLocaleString()}</span></div>
+                     <input type="range" min={AMORE_ADDON_CONFIG.realBouquet.min} max={AMORE_ADDON_CONFIG.realBouquet.max} step={1000} value={addonPrices.realBouquet}
+                       onChange={e => setAddonPrices(p => ({...p, realBouquet: Number(e.target.value)}))}
+                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                   </div>
+                 )}
+
+                 {/* Guest table flowers */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">ゲストテーブル装花</div><div className="text-[10px] text-gray-400">¥{AMORE_ADDON_CONFIG.guestFlowerPerTable.toLocaleString()} / 卓 · {Math.ceil(venueInfo.guestCount/10)}卓</div></div>
+                   <div className="flex gap-2">
+                     {([true,false] as const).map(v => (
+                       <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, guestFlowers: v}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.guestFlowers===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {v?'あり':'なし'}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Placing cards */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">席札・メニューカード</div><div className="text-[10px] text-gray-400">¥{AMORE_ADDON_CONFIG.placingCardPerPerson} / 人</div></div>
+                   <div className="flex gap-2">
+                     {([true,false] as const).map(v => (
+                       <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, placingCards: v}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.placingCards===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {v?'あり':'なし'}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Photo upgrade */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">フォトサイズアップグレード</div><div className="text-[10px] text-gray-400">+¥{AMORE_ADDON_CONFIG.photoUpgrade.min.toLocaleString()}–¥{AMORE_ADDON_CONFIG.photoUpgrade.max.toLocaleString()}</div></div>
+                   <div className="flex gap-2">
+                     {([true,false] as const).map(v => (
+                       <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, photoUpgrade: v}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.photoUpgrade===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {v?'あり':'なし'}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+                 {amoreAddons.photoUpgrade && (
+                   <div className="pb-4 pt-1 space-y-2 animate-in zoom-in-95">
+                     <div className="flex justify-between text-xs"><span className="text-gray-500">アップグレード料金</span><span className="font-mono font-bold text-amore-600">+¥{addonPrices.photoUpgrade.toLocaleString()}</span></div>
+                     <input type="range" min={AMORE_ADDON_CONFIG.photoUpgrade.min} max={AMORE_ADDON_CONFIG.photoUpgrade.max} step={1000} value={addonPrices.photoUpgrade}
+                       onChange={e => setAddonPrices(p => ({...p, photoUpgrade: Number(e.target.value)}))}
+                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                   </div>
+                 )}
+
+                 {/* Aisle flower */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">アイル装花</div><div className="text-[10px] text-gray-400">¥{AMORE_ADDON_CONFIG.aisleFlower.min.toLocaleString()}–¥{AMORE_ADDON_CONFIG.aisleFlower.max.toLocaleString()}</div></div>
+                   <div className="flex gap-2">
+                     {([true,false] as const).map(v => (
+                       <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, aisleFlower: v}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.aisleFlower===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {v?'あり':'なし'}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+                 {amoreAddons.aisleFlower && (
+                   <div className="pb-4 pt-1 space-y-2 animate-in zoom-in-95">
+                     <div className="flex justify-between text-xs"><span className="text-gray-500">アイル装花</span><span className="font-mono font-bold text-amore-600">¥{addonPrices.aisleFlower.toLocaleString()}</span></div>
+                     <input type="range" min={AMORE_ADDON_CONFIG.aisleFlower.min} max={AMORE_ADDON_CONFIG.aisleFlower.max} step={1000} value={addonPrices.aisleFlower}
+                       onChange={e => setAddonPrices(p => ({...p, aisleFlower: Number(e.target.value)}))}
+                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                   </div>
+                 )}
+               </div>
+
+               {/* Auto-configured service cards */}
+               {amoreServices.filter(s => s.isSelected).length > 0 && (
+                 <div className="space-y-4">
+                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">選択内容に基づく自動設定価格 — Fine-tune if needed</h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                     {amoreServices.filter(s => s.isSelected).map(service => {
+                       const isPerTable = service.id === 'amore_guest_fl';
+                       const localizedName = getServiceName(service.id);
+                       const qty = service.quantity || 1;
+                       return (
+                         <div key={service.id} className="bg-white rounded-[2rem] border-2 border-amore-100 shadow-sm p-5 space-y-4">
+                           <div className="flex justify-between items-start">
+                             <h4 className="font-serif text-sm font-bold text-gray-900 leading-tight flex-1 pr-2">{localizedName}</h4>
+                             <span className="text-[9px] bg-amore-100 text-amore-600 rounded-full px-2 py-0.5 font-black uppercase shrink-0">自動設定</span>
+                           </div>
+                           <div className="bg-gray-50 rounded-xl p-3 space-y-3">
+                             <div className="flex justify-between text-xs">
+                               <span className="text-gray-500">{t.qualityVolume}</span>
+                               <span className="font-mono font-bold text-amore-600">¥{service.currentPrice.toLocaleString()}{isPerTable ? ` × ${qty} 卓` : ''}</span>
+                             </div>
+                             <input type="range" min={service.minPrice} max={service.maxPrice} step={5000}
+                               value={service.currentPrice} onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
+                               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                             <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                               <span>¥{service.minPrice.toLocaleString()}</span><span>¥{service.maxPrice.toLocaleString()}</span>
+                             </div>
+                           </div>
+                           <div className="text-right font-mono font-bold text-sm text-gray-800">
+                             ¥{(service.currentPrice * qty).toLocaleString()}
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 </div>
+               )}
+             </div>
+           )}
+
+           <div className="flex justify-center pt-8">
+             <button onClick={() => setActiveTab('preview')} className="bg-amore-600 text-white px-12 sm:px-16 py-5 sm:py-6 rounded-3xl font-serif text-xl sm:text-2xl font-bold flex items-center gap-4 hover:bg-amore-700 hover:scale-105 transition-all shadow-2xl shadow-amore-200 group">
+               {t.generateSummary} <ChevronRight className="group-hover:translate-x-2 transition-transform" />
+             </button>
            </div>
 
            {/* 品目マスタ Price Settings Modal — admin only */}
@@ -1083,22 +1119,14 @@ export default function App() {
                  <div className="p-6 sm:p-8 space-y-6">
                    <div className="flex items-center justify-between">
                      <div>
-                       <h3 className="font-serif text-xl font-bold text-gray-900 flex items-center gap-2">
-                         <Settings size={18} className="text-amore-500" />
-                         品目マスタ 価格設定
-                       </h3>
+                       <h3 className="font-serif text-xl font-bold text-gray-900 flex items-center gap-2"><Settings size={18} className="text-amore-500" />品目マスタ 価格設定</h3>
                        <p className="text-xs text-gray-400 mt-1">Amore社内価格表に基づく基準価格を管理します。</p>
                      </div>
                      <button onClick={() => setShowPriceSettings(false)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400"><X size={18} /></button>
                    </div>
-
-                   <button
-                     onClick={resetToHinmokuPrices}
-                     className="w-full py-3 rounded-xl bg-amore-50 border border-amore-200 text-amore-700 font-bold text-sm hover:bg-amore-100 transition-colors flex items-center justify-center gap-2"
-                   >
+                   <button onClick={resetToHinmokuPrices} className="w-full py-3 rounded-xl bg-amore-50 border border-amore-200 text-amore-700 font-bold text-sm hover:bg-amore-100 transition-colors flex items-center justify-center gap-2">
                      <Check size={16} /> 品目マスタの価格にリセット
                    </button>
-
                    <div className="space-y-3">
                      {amoreServices.map(service => {
                        const orig = INITIAL_SERVICES.find(s => s.id === service.id);
@@ -1110,25 +1138,17 @@ export default function App() {
                              <div className="font-medium text-sm text-gray-800 truncate">{jaName}</div>
                              {masterPrice !== undefined && (
                                <div className="text-[10px] text-amore-500 font-bold mt-0.5 flex items-center gap-1">
-                                 <Star size={9} className="fill-amore-400 text-amore-400" />
-                                 品目マスタ: ¥{masterPrice.toLocaleString()}
+                                 <Star size={9} className="fill-amore-400 text-amore-400" />品目マスタ: ¥{masterPrice.toLocaleString()}
                                </div>
                              )}
                            </div>
                            <div className="flex items-center gap-2">
                              <span className="text-xs text-gray-400">¥</span>
-                             <input
-                               type="number"
-                               value={service.currentPrice}
-                               onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
-                               className="w-28 text-right text-sm font-mono font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amore-400 bg-white"
-                             />
+                             <input type="number" value={service.currentPrice} onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
+                               className="w-28 text-right text-sm font-mono font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amore-400 bg-white" />
                              {masterPrice !== undefined && service.currentPrice !== masterPrice && (
-                               <button
-                                 onClick={() => updateAmorePrice(service.id, masterPrice)}
-                                 className="p-1.5 rounded-lg bg-amore-50 hover:bg-amore-100 text-amore-500 transition-colors"
-                                 title="品目マスタにリセット"
-                               >
+                               <button onClick={() => updateAmorePrice(service.id, masterPrice)}
+                                 className="p-1.5 rounded-lg bg-amore-50 hover:bg-amore-100 text-amore-500 transition-colors" title="品目マスタにリセット">
                                  <Check size={13} />
                                </button>
                              )}
@@ -1142,7 +1162,6 @@ export default function App() {
              </div>
            )}
         </div>
-
         <div className={activeTab === 'preview' ? 'block animate-in fade-in' : 'hidden'}>
            <div id="quote-content" className="bg-white p-6 sm:p-12 rounded-[3rem] shadow-2xl max-w-[900px] mx-auto border border-gray-100">
               <section className="text-center border-b-2 border-gray-50 pb-8 sm:pb-12 mb-8 sm:mb-12 space-y-8">
@@ -1164,70 +1183,122 @@ export default function App() {
                  </div>
               </section>
 
-              <div className="space-y-16 mb-20 px-4 sm:px-8">
-                 {Object.entries(groupedFinalItems).map(([category, { venue, amore }]) => {
-                   if (venue.length === 0 && amore.length === 0) return null;
-                   return (
-                     <div key={category} className="break-inside-avoid group">
-                        <div className="flex items-center gap-4 mb-6">
-                           <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
-                           <h3 className="text-[10px] font-black text-gray-300 group-hover:text-amore-400 uppercase tracking-[0.3em] transition-colors">{t.categories[category]}</h3>
-                           <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
-                        </div>
-                        <div className="space-y-8">
-                           {venue.map(item => {
-                             const originalCatItem = MENU_CATALOG.find(c => c.name.en === item.name);
-                             const itemDescription = originalCatItem?.info?.[language] || item.description || originalCatItem?.info?.en;
-                             return (
-                              <div key={item.id} className="space-y-1">
-                                <div className="flex justify-between items-baseline">
-                                   <div className="flex flex-col">
-                                      <span className="font-serif text-lg sm:text-xl text-gray-800">{originalCatItem?.name[language] || item.name}</span>
-                                      <span className="text-[10px] text-gray-400 font-mono mt-1">¥{item.unitPrice.toLocaleString()} {item.quantity > 1 ? `x ${item.quantity}` : ''}</span>
-                                   </div>
-                                   <span className="font-mono font-bold text-base sm:text-lg">¥{(item.unitPrice * item.quantity).toLocaleString()}</span>
-                                </div>
-                                {itemDescription && (
-                                  <p className="text-xs text-gray-500 italic mt-1 pl-4 border-l-2 border-gray-100 leading-relaxed">
-                                    {itemDescription}
-                                  </p>
-                                )}
-                              </div>
-                             );
-                           })}
-                           {amore.map(item => {
-                             const isPerTable = item.id === 'amore_guest_fl';
-                             const totalItemPrice = item.currentPrice * (item.quantity || 1);
-                             const optionDesc = getAmoreOptionText(item);
-                             const baseInfo = item.info?.[language] || item.info?.en;
-                             return (
-                              <div key={item.id} className="space-y-2">
-                                <div className="flex justify-between items-baseline text-amore-700 bg-amore-50/30 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 rounded-3xl border border-amore-50">
-                                   <div className="flex flex-col">
-                                      <span className="font-serif text-lg sm:text-xl font-bold">{getServiceName(item.id)}</span>
-                                      {isPerTable && <span className="text-[10px] text-amore-400 font-mono mt-1">¥{item.currentPrice.toLocaleString()} x {item.quantity} {t.table}</span>}
-                                   </div>
-                                   <span className="font-mono font-bold text-lg sm:text-xl">¥{totalItemPrice.toLocaleString()}</span>
-                                </div>
-                                <div className="flex flex-col gap-1 pl-4 border-l-2 border-amore-100">
-                                  {optionDesc && (
-                                    <p className="text-xs text-amore-600/80 italic font-bold leading-relaxed">
-                                      {optionDesc}
-                                    </p>
-                                  )}
-                                  {baseInfo && (
-                                    <p className="text-[10px] text-gray-400 italic leading-relaxed">
-                                      {baseInfo}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                             );
-                           })}
-                        </div>
+              <div className="space-y-12 mb-20 px-4 sm:px-8">
+
+                 {/* ── Venue Section ── */}
+                 <div className="break-inside-avoid group">
+                   <div className="flex items-center gap-4 mb-6">
+                     <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
+                     <h3 className="text-[10px] font-black text-gray-300 group-hover:text-amore-400 uppercase tracking-[0.3em] transition-colors">会場費用 / Venue</h3>
+                     <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
+                   </div>
+                   <div className="space-y-5">
+                     <div className="flex justify-between items-baseline">
+                       <span className="font-serif text-lg sm:text-xl text-gray-800">パッケージプラン</span>
+                       <span className="font-mono font-bold text-base sm:text-lg">¥{venuePackagePrice.toLocaleString()}</span>
                      </div>
-                   );
-                 })}
+                     <div className="flex justify-between items-baseline">
+                       <div className="flex flex-col">
+                         <span className="font-serif text-lg sm:text-xl text-gray-800">お食事（{FOOD_PLANS[foodPlan].ja}）</span>
+                         <span className="text-[10px] text-gray-400 font-mono mt-1">¥{foodPricePerPerson.toLocaleString()} × {venueInfo.guestCount}名</span>
+                       </div>
+                       <span className="font-mono font-bold text-base sm:text-lg">¥{venueFoodTotal.toLocaleString()}</span>
+                     </div>
+                     {drinksIncluded && (
+                       <div className="flex justify-between items-baseline">
+                         <div className="flex flex-col">
+                           <span className="font-serif text-lg sm:text-xl text-gray-800">ドリンク</span>
+                           <span className="text-[10px] text-gray-400 font-mono mt-1">¥{drinkPricePerPerson.toLocaleString()} × {venueInfo.guestCount}名</span>
+                         </div>
+                         <span className="font-mono font-bold text-base sm:text-lg">¥{venueDrinkTotal.toLocaleString()}</span>
+                       </div>
+                     )}
+                     {childCount > 0 && (
+                       <div className="flex justify-between items-baseline">
+                         <div className="flex flex-col">
+                           <span className="font-serif text-lg sm:text-xl text-gray-800">お子様料金</span>
+                           <span className="text-[10px] text-gray-400 font-mono mt-1">¥{CHILD_PRICE.toLocaleString()} × {childCount}名</span>
+                         </div>
+                         <span className="font-mono font-bold text-base sm:text-lg">¥{venueChildTotal.toLocaleString()}</span>
+                       </div>
+                     )}
+                     {Object.entries(selectedOptionals).map(([optId, price]: [string, number]) => {
+                       const optItem = VENUE_OPTIONAL_ITEMS.find(i => i.id === optId);
+                       if (!optItem) return null;
+                       const total = optItem.isPerGuest ? price * venueInfo.guestCount : price;
+                       return (
+                         <div key={optId} className="flex justify-between items-baseline">
+                           <div className="flex flex-col">
+                             <span className="font-serif text-lg sm:text-xl text-gray-800">{optItem.ja}</span>
+                             {optItem.isPerGuest && <span className="text-[10px] text-gray-400 font-mono mt-1">¥{price.toLocaleString()} × {venueInfo.guestCount}名</span>}
+                           </div>
+                           <span className="font-mono font-bold text-base sm:text-lg">¥{total.toLocaleString()}</span>
+                         </div>
+                       );
+                     })}
+                     <div className="flex justify-between items-center border-t border-gray-100 pt-4">
+                       <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">会場小計</span>
+                       <span className="font-mono font-bold text-base sm:text-lg text-gray-700">¥{venueSubtotal.toLocaleString()}</span>
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* ── Amore Section ── */}
+                 {amoreMode && (
+                   <div className="break-inside-avoid group">
+                     <div className="flex items-center gap-4 mb-6">
+                       <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
+                       <h3 className="text-[10px] font-black text-gray-300 group-hover:text-amore-400 uppercase tracking-[0.3em] transition-colors">Amoreサービス</h3>
+                       <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
+                     </div>
+                     <div className="space-y-5">
+                       {amoreMode === 'standard' ? (
+                         <div className="space-y-4">
+                           <div className="flex justify-between items-baseline text-amore-700 bg-amore-50/30 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 rounded-3xl border border-amore-50">
+                             <div className="flex flex-col">
+                               <span className="font-serif text-lg sm:text-xl font-bold">スタンダードパッケージ</span>
+                               <span className="text-[10px] text-amore-400 font-mono mt-1">税込 ¥407,000</span>
+                             </div>
+                             <span className="font-mono font-bold text-lg sm:text-xl">¥{AMORE_STANDARD_PRETAX.toLocaleString()}</span>
+                           </div>
+                           <div className="pl-4 border-l-2 border-amore-100 flex flex-wrap gap-1.5">
+                             {AMORE_STANDARD_INCLUDES.map(inc => (
+                               <span key={inc.ja} className="text-[10px] bg-amore-50 border border-amore-100 text-amore-600 rounded-full px-2 py-0.5">{inc.ja}</span>
+                             ))}
+                           </div>
+                         </div>
+                       ) : (
+                         <>
+                           {selectedAmoreServices.map(item => {
+                             const isPerTable = item.id === 'amore_guest_fl';
+                             const qty = item.quantity || 1;
+                             const totalItemPrice = item.currentPrice * qty;
+                             return (
+                               <div key={item.id} className="flex justify-between items-baseline text-amore-700 bg-amore-50/30 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 rounded-3xl border border-amore-50">
+                                 <div className="flex flex-col">
+                                   <span className="font-serif text-lg sm:text-xl font-bold">{getServiceName(item.id)}</span>
+                                   {isPerTable && <span className="text-[10px] text-amore-400 font-mono mt-1">¥{item.currentPrice.toLocaleString()} × {qty}卓</span>}
+                                 </div>
+                                 <span className="font-mono font-bold text-lg sm:text-xl">¥{totalItemPrice.toLocaleString()}</span>
+                               </div>
+                             );
+                           })}
+                           {amoreAddons.aisleFlower && (
+                             <div className="flex justify-between items-baseline text-amore-700 bg-amore-50/30 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 rounded-3xl border border-amore-50">
+                               <span className="font-serif text-lg sm:text-xl font-bold">アイル装花</span>
+                               <span className="font-mono font-bold text-lg sm:text-xl">¥{addonPrices.aisleFlower.toLocaleString()}</span>
+                             </div>
+                           )}
+                         </>
+                       )}
+                       <div className="flex justify-between items-center border-t border-gray-100 pt-4">
+                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Amore小計</span>
+                         <span className="font-mono font-bold text-base sm:text-lg text-amore-700">¥{amoreSubtotal.toLocaleString()}</span>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
               </div>
 
               <div className="mb-12 px-4 sm:px-8">
@@ -1424,37 +1495,76 @@ export default function App() {
                   {(() => {
                     const rows: React.ReactNode[] = [];
                     let no = 1;
-                    quoteItems.forEach(item => {
-                      const jaName = TEMPLATE_ITEM_NAMES[item.name] || item.name;
-                      const total = item.unitPrice * item.quantity;
+                    // Venue line items
+                    const venueLineItems = [
+                      { id: 'venue_pkg', name: 'パッケージプラン', qty: 1, unit: '式', unitPrice: venuePackagePrice },
+                      { id: 'venue_food', name: `お食事（${FOOD_PLANS[foodPlan].ja}）`, qty: venueInfo.guestCount, unit: '人', unitPrice: foodPricePerPerson },
+                      ...(drinksIncluded ? [{ id: 'venue_drink', name: 'ドリンク', qty: venueInfo.guestCount, unit: '人', unitPrice: drinkPricePerPerson }] : []),
+                      ...(childCount > 0 ? [{ id: 'venue_child', name: 'お子様料金', qty: childCount, unit: '人', unitPrice: CHILD_PRICE }] : []),
+                      ...Object.entries(selectedOptionals).map(([optId, price]) => {
+                        const optItem = VENUE_OPTIONAL_ITEMS.find(i => i.id === optId)!;
+                        return { id: optId, name: optItem.ja, qty: optItem.isPerGuest ? venueInfo.guestCount : 1, unit: optItem.unit, unitPrice: price };
+                      }),
+                    ];
+                    venueLineItems.forEach(item => {
+                      const total = item.unitPrice * item.qty;
                       rows.push(
                         <tr key={item.id} className="even:bg-gray-50">
                           <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
-                          <td className="border border-gray-300 px-3 py-1.5">{jaName}</td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">{item.quantity}</td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">{item.isPerGuest ? '人' : '式'}</td>
+                          <td className="border border-gray-300 px-3 py-1.5">{item.name}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{item.qty}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{item.unit}</td>
                           <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{item.unitPrice.toLocaleString()}</td>
                           <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{total.toLocaleString()}</td>
                           <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
                         </tr>
                       );
                     });
-                    amoreServices.filter(s => s.isSelected).forEach(service => {
-                      const jaName = AMORE_TEMPLATE_NAMES[service.id] || service.name;
-                      const qty = service.quantity || 1;
-                      const total = service.currentPrice * qty;
+                    // Amore standard as single line
+                    if (amoreMode === 'standard') {
                       rows.push(
-                        <tr key={service.id} className="even:bg-gray-50 bg-rose-50/30">
+                        <tr key="amore_std" className="even:bg-gray-50 bg-rose-50/30">
                           <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
-                          <td className="border border-gray-300 px-3 py-1.5 text-amore-700">{jaName}</td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">{qty}</td>
+                          <td className="border border-gray-300 px-3 py-1.5 text-amore-700">Amoreスタンダードパッケージ</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">1</td>
                           <td className="border border-gray-300 px-2 py-1.5 text-center">式</td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{service.currentPrice.toLocaleString()}</td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{total.toLocaleString()}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{AMORE_STANDARD_PRETAX.toLocaleString()}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{AMORE_STANDARD_PRETAX.toLocaleString()}</td>
                           <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
                         </tr>
                       );
-                    });
+                    }
+                    if (amoreMode === 'custom') {
+                      amoreServices.filter(s => s.isSelected).forEach(service => {
+                        const jaName = AMORE_TEMPLATE_NAMES[service.id] || service.name;
+                        const qty = service.quantity || 1;
+                        const total = service.currentPrice * qty;
+                        rows.push(
+                          <tr key={service.id} className="even:bg-gray-50 bg-rose-50/30">
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
+                            <td className="border border-gray-300 px-3 py-1.5 text-amore-700">{jaName}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">{qty}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">式</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{service.currentPrice.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{total.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
+                          </tr>
+                        );
+                      });
+                      if (amoreAddons.aisleFlower) {
+                        rows.push(
+                          <tr key="aisle_fl" className="even:bg-gray-50 bg-rose-50/30">
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
+                            <td className="border border-gray-300 px-3 py-1.5 text-amore-700">アイル装花</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">1</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">式</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{addonPrices.aisleFlower.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{addonPrices.aisleFlower.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
+                          </tr>
+                        );
+                      }
+                    }
                     // Empty rows to pad to at least 10 lines
                     while (rows.length < 10) {
                       rows.push(
