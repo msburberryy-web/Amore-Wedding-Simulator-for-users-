@@ -348,6 +348,8 @@ export default function App() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
+  const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
+
   const todayDate = new Date().toLocaleDateString(
     language === 'ja' ? 'ja-JP' : (language === 'my' ? 'my-MM' : 'en-US')
   );
@@ -964,13 +966,15 @@ export default function App() {
            <header className="text-center max-w-2xl mx-auto">
               <div className="flex items-center justify-center gap-3">
                 <h2 className="text-3xl sm:text-4xl font-serif font-bold">Amore Specialized Services</h2>
-                <button
-                  onClick={() => setShowPriceSettings(true)}
-                  className="p-2.5 rounded-xl bg-gray-100 hover:bg-amore-100 text-gray-500 hover:text-amore-600 transition-colors"
-                  title="品目マスタ 価格設定"
-                >
-                  <Settings size={18} />
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowPriceSettings(true)}
+                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-amore-100 text-gray-500 hover:text-amore-600 transition-colors"
+                    title="品目マスタ 価格設定"
+                  >
+                    <Settings size={18} />
+                  </button>
+                )}
               </div>
               <p className="text-gray-500 mt-2 text-sm sm:text-base">Personalize your wedding with our premium support options.</p>
            </header>
@@ -1072,8 +1076,8 @@ export default function App() {
               </button>
            </div>
 
-           {/* 品目マスタ Price Settings Modal */}
-           {showPriceSettings && (
+           {/* 品目マスタ Price Settings Modal — admin only */}
+           {isAdmin && showPriceSettings && (
              <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowPriceSettings(false)}>
                <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                  <div className="p-6 sm:p-8 space-y-6">
