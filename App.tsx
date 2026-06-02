@@ -7,6 +7,40 @@ import { ServiceCard } from './components/ServiceCard';
 import { Heart, Loader2, Sparkles, X, Info, Plus, Minus, Download, PieChart as PieChartIcon, ChevronRight, Settings, FileText, LayoutGrid, Users, Landmark, BookOpen, CheckCircle2, Wallet, TrendingUp, TrendingDown, ArrowRight, Image as ImageIcon, HelpCircle, Award, Star, Check, MousePointer2, ListChecks, MessageCircle, MapPin, Search, Clock } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
+// --- 品目マスタ reference prices from spreadsheet ---
+const HINMOKU_MASTER_PRICES: Record<string, number> = {
+  '1': 120000,
+  '2': 120000,
+  'amore_main_fl': 70000,
+  'makeup': 35000,
+  'webinv': 10000,
+  'transport': 15000,
+};
+
+// Maps English quote item names → Japanese template names
+const TEMPLATE_ITEM_NAMES: Record<string, string> = {
+  'Venue Service Package (Per Person)': 'プラン（ウェディングケーキ、フリードリンク含む）',
+  'Venue Rental & Service fees': '会場使用料',
+  'Chapel Usage fees': '挙式料（チャペル）',
+  'Venue Food Menu (Buffet/Course)': 'お料理（コース）',
+  'Drinks (Free Drink Plan)': 'お飲み物（フリードリンク）',
+  'Groom: Handling Fee (Western)': '新郎洋装持込料',
+  'Bride: Handling Fee (Western)': '新婦洋装持込料',
+};
+
+// Maps Amore service IDs → Japanese template names
+const AMORE_TEMPLATE_NAMES: Record<string, string> = {
+  '1': 'プロジュース・プランナー, MC',
+  '2': 'スチール撮影＋ビデオ撮影（スタンダード）',
+  'dress': 'ドレス・タキシードレンタル',
+  'makeup': 'ヘアメイク（新婦）',
+  'amore_bouquet': '生花ブーケ',
+  'amore_main_fl': 'メインテーブル装花・写真ブース',
+  'amore_guest_fl': 'ゲストテーブル装花',
+  'webinv': 'Web招待状・シーティングチャート',
+  'transport': '交通費',
+};
+
 // --- TYPES ---
 type TabType = 'setup' | 'catalog' | 'amore' | 'preview';
 type Language = 'en' | 'ja' | 'my';
@@ -310,6 +344,11 @@ export default function App() {
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [downloadTime, setDownloadTime] = useState<string>('');
+  const [showPriceSettings, setShowPriceSettings] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+
+  const isAdmin = new URLSearchParams(window.location.search).get('mode') === 'admin';
 
   const todayDate = new Date().toLocaleDateString(
     language === 'ja' ? 'ja-JP' : (language === 'my' ? 'my-MM' : 'en-US')
@@ -452,6 +491,31 @@ export default function App() {
         setCapturing(false);
       }
     }, 100);
+  };
+
+  const resetToHinmokuPrices = () => {
+    setAmoreServices(prev => prev.map(s =>
+      HINMOKU_MASTER_PRICES[s.id] !== undefined
+        ? { ...s, currentPrice: HINMOKU_MASTER_PRICES[s.id] }
+        : s
+    ));
+  };
+
+  const handleDownloadTemplate = async () => {
+    const element = document.getElementById('template-quote-content');
+    if (!element) return;
+    setDownloadingTemplate(true);
+    try {
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = `mitsumori-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      console.error('Template export failed', e);
+    } finally {
+      setDownloadingTemplate(false);
+    }
   };
 
   const updateItemQty = (name: string, delta: number) => {
@@ -900,7 +964,18 @@ export default function App() {
 
         <div className={activeTab === 'amore' ? 'block space-y-12 animate-in' : 'hidden'}>
            <header className="text-center max-w-2xl mx-auto">
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold">Amore Specialized Services</h2>
+              <div className="flex items-center justify-center gap-3">
+                <h2 className="text-3xl sm:text-4xl font-serif font-bold">Amore Specialized Services</h2>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowPriceSettings(true)}
+                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-amore-100 text-gray-500 hover:text-amore-600 transition-colors"
+                    title="品目マスタ 価格設定"
+                  >
+                    <Settings size={18} />
+                  </button>
+                )}
+              </div>
               <p className="text-gray-500 mt-2 text-sm sm:text-base">Personalize your wedding with our premium support options.</p>
            </header>
            
@@ -1000,6 +1075,72 @@ export default function App() {
                  {t.generateSummary} <ChevronRight className="group-hover:translate-x-2 transition-transform" />
               </button>
            </div>
+
+           {/* 品目マスタ Price Settings Modal — admin only */}
+           {isAdmin && showPriceSettings && (
+             <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowPriceSettings(false)}>
+               <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                 <div className="p-6 sm:p-8 space-y-6">
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <h3 className="font-serif text-xl font-bold text-gray-900 flex items-center gap-2">
+                         <Settings size={18} className="text-amore-500" />
+                         品目マスタ 価格設定
+                       </h3>
+                       <p className="text-xs text-gray-400 mt-1">Amore社内価格表に基づく基準価格を管理します。</p>
+                     </div>
+                     <button onClick={() => setShowPriceSettings(false)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+                   </div>
+
+                   <button
+                     onClick={resetToHinmokuPrices}
+                     className="w-full py-3 rounded-xl bg-amore-50 border border-amore-200 text-amore-700 font-bold text-sm hover:bg-amore-100 transition-colors flex items-center justify-center gap-2"
+                   >
+                     <Check size={16} /> 品目マスタの価格にリセット
+                   </button>
+
+                   <div className="space-y-3">
+                     {amoreServices.map(service => {
+                       const orig = INITIAL_SERVICES.find(s => s.id === service.id);
+                       const masterPrice = HINMOKU_MASTER_PRICES[service.id];
+                       const jaName = AMORE_TEMPLATE_NAMES[service.id] || orig?.name.ja || service.name;
+                       return (
+                         <div key={service.id} className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                           <div className="flex-1 min-w-0">
+                             <div className="font-medium text-sm text-gray-800 truncate">{jaName}</div>
+                             {masterPrice !== undefined && (
+                               <div className="text-[10px] text-amore-500 font-bold mt-0.5 flex items-center gap-1">
+                                 <Star size={9} className="fill-amore-400 text-amore-400" />
+                                 品目マスタ: ¥{masterPrice.toLocaleString()}
+                               </div>
+                             )}
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <span className="text-xs text-gray-400">¥</span>
+                             <input
+                               type="number"
+                               value={service.currentPrice}
+                               onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
+                               className="w-28 text-right text-sm font-mono font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amore-400 bg-white"
+                             />
+                             {masterPrice !== undefined && service.currentPrice !== masterPrice && (
+                               <button
+                                 onClick={() => updateAmorePrice(service.id, masterPrice)}
+                                 className="p-1.5 rounded-lg bg-amore-50 hover:bg-amore-100 text-amore-500 transition-colors"
+                                 title="品目マスタにリセット"
+                               >
+                                 <Check size={13} />
+                               </button>
+                             )}
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 </div>
+               </div>
+             </div>
+           )}
         </div>
 
         <div className={activeTab === 'preview' ? 'block animate-in fade-in' : 'hidden'}>
@@ -1195,14 +1336,177 @@ export default function App() {
                       > 
                         {t.viewDocument} 
                       </button>
-                      <button onClick={handleDownloadImage} disabled={capturing} className="bg-gray-900 text-white px-5 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50"> 
-                        {capturing ? <Loader2 className="animate-spin" /> : <Download size={16} />} 
+                      <button
+                        onClick={() => setShowTemplateModal(true)}
+                        className="bg-amore-600 text-white px-4 sm:px-5 py-2 sm:py-3 rounded-xl hover:bg-amore-700 transition-all flex items-center justify-center gap-2 shadow-lg text-xs font-bold"
+                      >
+                        <FileText size={15} />
+                        <span className="hidden sm:inline">見積書</span>
+                      </button>
+                      <button onClick={handleDownloadImage} disabled={capturing} className="bg-gray-900 text-white px-5 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50">
+                        {capturing ? <Loader2 className="animate-spin" /> : <Download size={16} />}
                       </button>
                    </div>
                 </div>
             </div>
         </div>
       </div>
+      {/* 見積もり Template Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl my-8">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h3 className="font-serif text-xl font-bold text-gray-900">御見積書 プレビュー</h3>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleDownloadTemplate}
+                  disabled={downloadingTemplate}
+                  className="flex items-center gap-2 bg-amore-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-amore-700 transition-colors disabled:opacity-50"
+                >
+                  {downloadingTemplate ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  ダウンロード
+                </button>
+                <button onClick={() => setShowTemplateModal(false)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              </div>
+            </div>
+
+            {/* Template content captured by html2canvas */}
+            <div id="template-quote-content" className="p-8 sm:p-12 bg-white font-sans" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
+              {/* Header */}
+              <div className="flex justify-between items-start mb-8">
+                <div className="space-y-1">
+                  <div className="text-xs text-gray-500">Wedding Date:</div>
+                  <div className="text-sm font-bold text-gray-800 border-b border-gray-300 pb-1 w-48">
+                    {venueInfo.name || '　'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">会場：</div>
+                  <div className="text-sm font-medium text-gray-700 border-b border-gray-300 pb-1 w-48">
+                    {venueInfo.name || '　'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">有効期限：</div>
+                </div>
+                <div className="text-right space-y-1">
+                  <div className="text-3xl font-bold text-gray-900" style={{ fontFamily: "serif" }}>御　見　積　書</div>
+                  <div className="text-xs text-gray-500 mt-4">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                  <div className="text-xs text-gray-500">StartUP株式会社</div>
+                  <div className="text-xs text-gray-400">東京都文京区千石４丁目26-2</div>
+                  <div className="text-xs text-gray-400">ＳＡＮＳＡＮ千石第一ビル 301</div>
+                  <div className="text-xs text-gray-400">TEL：080-3516-7231</div>
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-600 mb-6 border-b border-gray-200 pb-4">下記のとおりお見積申し上げます。</div>
+
+              {/* Total amount box */}
+              <div className="flex justify-between items-center mb-6 p-4 border-2 border-gray-900">
+                <div className="text-sm font-bold text-gray-700">お見積金額</div>
+                <div className="text-2xl font-bold text-gray-900">¥{Math.floor(grandTotal).toLocaleString()} -</div>
+                <div className="text-xs text-gray-500">
+                  <div>小計: ¥{subtotalBeforeTax.toLocaleString()}</div>
+                  <div>消費税(10%): ¥{taxAmount.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* Line items table */}
+              <table className="w-full text-xs border-collapse mb-8">
+                <thead>
+                  <tr className="bg-gray-800 text-white">
+                    <th className="border border-gray-600 px-2 py-2 text-center w-8">No.</th>
+                    <th className="border border-gray-600 px-3 py-2 text-left">品番・品名</th>
+                    <th className="border border-gray-600 px-2 py-2 text-center w-12">数量</th>
+                    <th className="border border-gray-600 px-2 py-2 text-center w-10">単位</th>
+                    <th className="border border-gray-600 px-2 py-2 text-right w-24">単価</th>
+                    <th className="border border-gray-600 px-2 py-2 text-right w-24">金額</th>
+                    <th className="border border-gray-600 px-2 py-2 text-center w-10">税</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const rows: React.ReactNode[] = [];
+                    let no = 1;
+                    quoteItems.forEach(item => {
+                      const jaName = TEMPLATE_ITEM_NAMES[item.name] || item.name;
+                      const total = item.unitPrice * item.quantity;
+                      rows.push(
+                        <tr key={item.id} className="even:bg-gray-50">
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
+                          <td className="border border-gray-300 px-3 py-1.5">{jaName}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{item.quantity}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{item.isPerGuest ? '人' : '式'}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{item.unitPrice.toLocaleString()}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{total.toLocaleString()}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
+                        </tr>
+                      );
+                    });
+                    amoreServices.filter(s => s.isSelected).forEach(service => {
+                      const jaName = AMORE_TEMPLATE_NAMES[service.id] || service.name;
+                      const qty = service.quantity || 1;
+                      const total = service.currentPrice * qty;
+                      rows.push(
+                        <tr key={service.id} className="even:bg-gray-50 bg-rose-50/30">
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
+                          <td className="border border-gray-300 px-3 py-1.5 text-amore-700">{jaName}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{qty}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">式</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{service.currentPrice.toLocaleString()}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{total.toLocaleString()}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
+                        </tr>
+                      );
+                    });
+                    // Empty rows to pad to at least 10 lines
+                    while (rows.length < 10) {
+                      rows.push(
+                        <tr key={`empty-${rows.length}`} className="even:bg-gray-50">
+                          <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-300">{no++}</td>
+                          <td className="border border-gray-300 px-3 py-1.5">&nbsp;</td>
+                          <td className="border border-gray-300 px-2 py-1.5"></td>
+                          <td className="border border-gray-300 px-2 py-1.5"></td>
+                          <td className="border border-gray-300 px-2 py-1.5"></td>
+                          <td className="border border-gray-300 px-2 py-1.5"></td>
+                          <td className="border border-gray-300 px-2 py-1.5"></td>
+                        </tr>
+                      );
+                    }
+                    return rows;
+                  })()}
+                  {/* Totals */}
+                  <tr className="bg-gray-100 font-bold">
+                    <td colSpan={5} className="border border-gray-300 px-3 py-2 text-right text-xs">小計</td>
+                    <td className="border border-gray-300 px-2 py-2 text-right font-mono">¥{subtotalBeforeTax.toLocaleString()}</td>
+                    <td className="border border-gray-300"></td>
+                  </tr>
+                  <tr className="bg-gray-100 font-bold">
+                    <td colSpan={5} className="border border-gray-300 px-3 py-2 text-right text-xs">消費税（10%）</td>
+                    <td className="border border-gray-300 px-2 py-2 text-right font-mono">¥{taxAmount.toLocaleString()}</td>
+                    <td className="border border-gray-300"></td>
+                  </tr>
+                  <tr className="bg-gray-800 text-white font-bold">
+                    <td colSpan={5} className="border border-gray-600 px-3 py-2 text-right text-sm">合　計</td>
+                    <td className="border border-gray-600 px-2 py-2 text-right font-mono text-base">¥{Math.floor(grandTotal).toLocaleString()}</td>
+                    <td className="border border-gray-600"></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Footer */}
+              <div className="flex justify-between items-end text-xs text-gray-500 border-t border-gray-200 pt-4 mt-4">
+                <div>
+                  <div className="text-[10px] text-gray-400 italic">{t.disclaimer}</div>
+                </div>
+                <div className="text-right space-y-0.5">
+                  <div className="font-bold text-gray-700">StartUP株式会社 / Amore Wedding Tokyo</div>
+                  <div>startup.eternalknotweddings@gmail.com</div>
+                  <div className="flex items-center justify-end gap-1 text-amore-500 mt-1">
+                    <Heart size={10} className="fill-amore-500" /> Amore Wedding Tokyo
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
