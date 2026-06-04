@@ -82,18 +82,18 @@ type Language = 'en' | 'ja' | 'my';
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
   en: {
-    title: "Wedding Service Estimate",
-    subtitle: "Prepared exclusively for your special day",
-    appIntro: "This app is to estimate your wedding budget based on what services you need. The actual cost will depends on the venue of your choice and your plan.",
+    title: "Wedding Budget Simulation",
+    subtitle: "Initial cost simulation · For planning purposes only",
+    appIntro: "Use this simulator to explore how different venue and service choices affect your total budget. All figures shown are reference ranges — your Amore planner will confirm actual costs once venue and services are finalised.",
     guestCount: "Guest Count",
     date: "Date",
-    totalEstimate: "Total Estimate",
+    totalEstimate: "Simulated Total",
     subtotalVenue: "Venue Subtotal",
     subtotalAmore: "Amore Services",
     subtotal: "Subtotal",
     tax: "Consumption Tax (10%)",
-    totalRange: "Total Est. Range",
-    disclaimer: "This document is an estimate only. Prices are subject to availability and final confirmation by the venue.",
+    totalRange: "Simulated Range",
+    disclaimer: "This is a budget simulation for internal planning use — not a final quotation or binding price. Figures are reference estimates only. Final costs will be confirmed by your Amore planner.",
     budgetFriendlyNote: "Budget friendly option? Please freely discuss with us. We are happy to tailor the plan to your needs.",
     menuBook: "Venue Selection",
     menuBookDesc: "How would you like to calculate venue costs?",
@@ -118,9 +118,9 @@ const TRANSLATIONS = {
     included: "Included in Estimate",
     notIncluded: "Not Selected",
     nextStepAmore: "Next: Amore Services",
-    generateSummary: "Generate Final Summary",
-    viewDocument: "View Document",
-    estimateTotal: "Estimate Total (Inc. Tax)",
+    generateSummary: "View Simulation Summary",
+    viewDocument: "View Simulation",
+    estimateTotal: "Simulated Total (Inc. Tax)",
     quantity: "Quantity",
     table: "Table",
     perPerson: "per person",
@@ -143,19 +143,19 @@ const TRANSLATIONS = {
     }
   },
   ja: {
-    title: "御見積書",
-    subtitle: "お二人の特別な日のために",
-    appIntro: "このアプリは、必要なサービスに基づいて結婚式の予算を概算するためのものです。実際の費用は、選択した会場やプランによって異なります。",
+    title: "ブライダル費用シミュレーション",
+    subtitle: "初期費用試算 · プランニング参考資料",
+    appIntro: "このシミュレーターでは、会場やサービスの選択が総費用にどう影響するかをご確認いただけます。表示価格はあくまでも参考目安です。正式な費用はAmoreプランナーと各会場で確認の上ご案内いたします。",
     guestCount: "招待客数",
-    date: "発行日",
-    totalEstimate: "御見積総額",
-    subtotalVenue: "会場関係費",
-    subtotalAmore: "Amoreサービス料",
+    date: "作成日",
+    totalEstimate: "シミュレーション合計",
+    subtotalVenue: "会場関係費（参考）",
+    subtotalAmore: "Amoreサービス料（参考）",
     subtotal: "小計",
     tax: "消費税 (10%)",
-    totalRange: "御見積総額（目安）",
+    totalRange: "シミュレーション合計（目安）",
     buffer: "(予備費 +5%)",
-    disclaimer: "この見積書は概算です。価格は空き状況や会場の最終確認により変更される場合があります。",
+    disclaimer: "本資料はプランニング用の費用シミュレーションであり、正式な見積書・契約書ではありません。表示金額はすべて参考目安です。正式費用はAmoreプランナーより別途ご案内いたします。",
     budgetFriendlyNote: "ご予算に応じたプランのご提案も可能です。お気軽にご相談ください。",
     menuBook: "会場費用の選択",
     menuBookDesc: "会場費用の算出方法をお選びください。",
@@ -180,9 +180,9 @@ const TRANSLATIONS = {
     included: "見積に含まれています",
     notIncluded: "未選択",
     nextStepAmore: "次へ: Amoreサービス",
-    generateSummary: "最終確認へ",
-    viewDocument: "見積書を表示",
-    estimateTotal: "御見積総額（税込）",
+    generateSummary: "シミュレーション結果へ",
+    viewDocument: "シミュレーション表示",
+    estimateTotal: "シミュレーション合計（税込）",
     quantity: "数量",
     table: "卓",
     perPerson: "1名あたり",
@@ -205,18 +205,18 @@ const TRANSLATIONS = {
     }
   },
   my: {
-    title: "မင်္ဂလာဆောင် ဝန်ဆောင်မှု ခန့်မှန်းခြေစာရင်း",
-    subtitle: "သင့်မင်္ဂလာပွဲအတွက် အထူးစီစဉ်ထားခြင်း",
-    appIntro: "ဤအက်ပ်သည် သင်လိုအပ်သော ဝန်ဆောင်မှုများပေါ်မူတည်၍ သင်၏မင်္ဂလာဆောင်ဘတ်ဂျက်ကို ခန့်မှန်းရန်ဖြစ်သည်။ အမှန်တကယ်ကုန်ကျစရိတ်မှာ သင်ရွေးချယ်ထားသော ခန်းမနှင့် အစီစဉ်ပေါ်တွင် မူတည်ပါသည်။",
+    title: "မင်္ဂလာဆောင် ဘတ်ဂျက် စီမံချက်",
+    subtitle: "ကနဦးကုန်ကျစရိတ် ခန့်မှန်းခြေ · စီမံကိန်းဆွေးနွေးရန်",
+    appIntro: "ဤ simulator ကို အသုံးပြု၍ ခန်းမနှင့် ဝန်ဆောင်မှုရွေးချယ်မှုများသည် စုစုပေါင်းဘတ်ဂျက်ကို မည်ကဲ့သို့ သက်ရောက်သည်ကို စစ်ဆေးကြည့်ရှုနိုင်ပါသည်။ ဤဈေးနှုန်းများသည် ကိုးကားဆောင်ရွက်ရန် သာဖြစ်သည်။ တိကျသောကုန်ကျစရိတ်ကို Amore planner မှ အတည်ပြုပေးမည်ဖြစ်သည်။",
     guestCount: "ဧည့်သည်အရေအတွက်",
     date: "ရက်စွဲ",
-    totalEstimate: "စုစုပေါင်း ခန့်မှန်းခြေစာရင်း",
+    totalEstimate: "ခန့်မှန်းကြိုတင် ကုန်ကျစရိတ်",
     subtotalVenue: "ခန်းမနှင့် ဝန်ဆောင်မှုစရိတ်",
     subtotalAmore: "Amore ဝန်ဆောင်မှုများ",
     subtotal: "စုစုပေါင်း",
     tax: "အခွန် (၁၀%)",
     totalRange: "ခန့်မှန်းခြေ စုစုပေါင်း",
-    disclaimer: "ဤစာရွက်စာတမ်းသည် ခန့်မှန်းခြေသာဖြစ်သည်။ ဈေးနှုန်းများသည် ခန်းမ၏ အတည်ပြုချက်အပေါ် မူတည်၍ ပြောင်းလဲနိုင်သည်။",
+    disclaimer: "ဤစာရွက်စာတမ်းသည် ကနဦးကုန်ကျစရိတ် ခန့်မှန်းခြေ (simulation) သာဖြစ်ပြီး တရားဝင် ကမ်းလှမ်းစာ သို့မဟုတ် စာချုပ်မဟုတ်ပါ။ ကိန်းဂဏာန်းများအားလုံး ကိုးကားသုံးသပ်ရန်သာဖြစ်သည်။ တိကျသောကုန်ကျစရိတ်ကို Amore planner မှ ဆက်သွယ်ညှိနှိုင်းပြောဆိုပေးမည်ဖြစ်သည်။",
     budgetFriendlyNote: "ဘတ်ဂျက်နှင့်အညီ ညှိနှိုင်းလိုပါက ပွင့်လင်းလွတ်လပ်စွာ ဆွေးနွေးနိုင်ပါသည်။ လူကြီးမင်းတို့ စိတ်တိုင်းကျဖြစ်စေရန် ကျွန်ုပ်တို့ဘက်မှ အတတ်နိုင်ဆုံး ကူညီဆောင်ရွက်ပေးပါမည်။",
     menuBook: "ခန်းမစရိတ် တွက်ချက်ခြင်း",
     menuBookDesc: "ခန်းမစရိတ်ကို မည်သို့တွက်ချက်လိုသနည်း?",
@@ -241,9 +241,9 @@ const TRANSLATIONS = {
     included: "စာရင်းထဲထည့်ပြီး",
     notIncluded: "မရွေးချယ်ရသေးပါ",
     nextStepAmore: "ရှေ့ဆက်မည်: Amore ဝန်ဆောင်မှုများ",
-    generateSummary: "အကျဉ်းချုပ်ကြည့်မည်",
-    viewDocument: "စာရွက်စာတမ်းကြည့်မည်",
-    estimateTotal: "စုစုပေါင်း (အခွန်အပါဝင်)",
+    generateSummary: "ကြိုတင်ခန့်မှန်းခြေ ကြည့်မည်",
+    viewDocument: "Simulation ကြည့်မည်",
+    estimateTotal: "ခန့်မှန်းစုစုပေါင်း (အခွန်အပါဝင်)",
     quantity: "အရေအတွက်",
     table: "စားပွဲ",
     perPerson: "တစ်ဦးလျှင်",
@@ -1216,7 +1216,16 @@ export default function App() {
                     <p className="text-gray-400 tracking-widest uppercase text-[10px] font-black">{t.guestCount}: {venueInfo.guestCount} Guests • {t.date}: {todayDate}</p>
                     {venueInfo.name && <p className="text-amore-600 font-serif text-lg italic mt-2">Venue: {venueInfo.name}</p>}
                  </div>
-                 
+
+                 {/* Simulation banner */}
+                 <div className="mx-auto max-w-2xl bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 flex items-start gap-3">
+                   <span className="text-amber-500 text-lg shrink-0">⚠</span>
+                   <div className="text-left space-y-1">
+                     <p className="text-[11px] font-black text-amber-700 uppercase tracking-wide">参考シミュレーション / Budget Simulation Only</p>
+                     <p className="text-xs text-amber-700/80 leading-relaxed">{t.disclaimer}</p>
+                   </div>
+                 </div>
+
                  <div className="bg-rose-50/50 border border-rose-100 p-6 rounded-3xl mx-auto max-w-2xl">
                     <p className="text-amore-700 text-sm italic leading-relaxed">
                        {t.appIntro}
@@ -1453,7 +1462,7 @@ export default function App() {
                         className="bg-amore-600 text-white px-4 sm:px-5 py-2 sm:py-3 rounded-xl hover:bg-amore-700 transition-all flex items-center justify-center gap-2 shadow-lg text-xs font-bold"
                       >
                         <FileText size={15} />
-                        <span className="hidden sm:inline">見積書</span>
+                        <span className="hidden sm:inline">シミュレーション</span>
                       </button>
                       <button onClick={handleDownloadImage} disabled={capturing} className="bg-gray-900 text-white px-5 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50">
                         {capturing ? <Loader2 className="animate-spin" /> : <Download size={16} />}
@@ -1468,7 +1477,7 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl my-8">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h3 className="font-serif text-xl font-bold text-gray-900">御見積書 プレビュー</h3>
+              <h3 className="font-serif text-xl font-bold text-gray-900">費用シミュレーション プレビュー</h3>
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleDownloadTemplate}
@@ -1485,21 +1494,34 @@ export default function App() {
             {/* Template content captured by html2canvas */}
             <div id="template-quote-content" className="p-8 sm:p-12 bg-white font-sans" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
               {/* Header */}
+              {/* Simulation banner */}
+              <div className="mb-6 px-4 py-2 bg-amber-50 border border-amber-200 rounded text-center">
+                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">⚠ 本書は費用シミュレーション（参考試算）です。正式な見積書・契約書ではありません。</span>
+              </div>
+
               <div className="flex justify-between items-start mb-8">
-                <div className="space-y-1">
-                  <div className="text-xs text-gray-500">Wedding Date:</div>
-                  <div className="text-sm font-bold text-gray-800 border-b border-gray-300 pb-1 w-48">
-                    {venueInfo.name || '　'}
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">お客様名 / Client Name</div>
+                    <div className="text-sm border-b-2 border-gray-400 pb-0.5 w-52 text-gray-300 italic">（ここにご記入ください）</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-2">会場：</div>
-                  <div className="text-sm font-medium text-gray-700 border-b border-gray-300 pb-1 w-48">
-                    {venueInfo.name || '　'}
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">結婚式日程 / Wedding Date</div>
+                    <div className="text-sm border-b-2 border-gray-400 pb-0.5 w-52 text-gray-300 italic">（ここにご記入ください）</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-2">有効期限：</div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">ご希望会場 / Venue</div>
+                    <div className="text-sm border-b-2 border-gray-400 pb-0.5 w-52 text-gray-300 italic">（ここにご記入ください）</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">お招待人数 / Guest Count</div>
+                    <div className="text-sm border-b border-gray-300 pb-0.5 w-52 font-medium text-gray-700">{venueInfo.guestCount}名</div>
+                  </div>
                 </div>
                 <div className="text-right space-y-1">
-                  <div className="text-3xl font-bold text-gray-900" style={{ fontFamily: "serif" }}>御　見　積　書</div>
-                  <div className="text-xs text-gray-500 mt-4">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                  <div className="text-2xl font-bold text-gray-900" style={{ fontFamily: "serif" }}>費用シミュレーション</div>
+                  <div className="text-xs text-gray-400">（参考試算 · 正式見積書ではありません）</div>
+                  <div className="text-xs text-gray-500 mt-3">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                   <div className="text-xs text-gray-500">StartUP株式会社</div>
                   <div className="text-xs text-gray-400">東京都文京区千石４丁目26-2</div>
                   <div className="text-xs text-gray-400">ＳＡＮＳＡＮ千石第一ビル 301</div>
@@ -1507,11 +1529,11 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-600 mb-6 border-b border-gray-200 pb-4">下記のとおりお見積申し上げます。</div>
+              <div className="text-sm text-gray-600 mb-6 border-b border-gray-200 pb-4">下記のとおりシミュレーション金額をご案内いたします。<span className="text-xs text-gray-400 ml-2">（実際の金額は担当プランナーより確認のうえご案内いたします）</span></div>
 
               {/* Total amount box */}
               <div className="flex justify-between items-center mb-6 p-4 border-2 border-gray-900">
-                <div className="text-sm font-bold text-gray-700">お見積金額</div>
+                <div className="text-sm font-bold text-gray-700">シミュレーション金額<span className="text-[10px] font-normal text-gray-400 ml-1">（参考）</span></div>
                 <div className="text-2xl font-bold text-gray-900">¥{Math.floor(grandTotal).toLocaleString()} -</div>
                 <div className="text-xs text-gray-500">
                   <div>小計: ¥{subtotalBeforeTax.toLocaleString()}</div>
@@ -1644,8 +1666,10 @@ export default function App() {
 
               {/* Footer */}
               <div className="flex justify-between items-end text-xs text-gray-500 border-t border-gray-200 pt-4 mt-4">
-                <div>
-                  <div className="text-[10px] text-gray-400 italic">{t.disclaimer}</div>
+                <div className="max-w-xs space-y-1">
+                  <div className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">参考試算 / Simulation Only</div>
+                  <div className="text-[9px] text-gray-400 italic leading-relaxed">{t.disclaimer}</div>
+                  <div className="text-[9px] text-gray-400 italic">本シミュレーションはAmoreスタッフとの打ち合わせのベースとしてお使いください。</div>
                 </div>
                 <div className="text-right space-y-0.5">
                   <div className="font-bold text-gray-700">StartUP株式会社 / Amore Wedding Tokyo</div>
