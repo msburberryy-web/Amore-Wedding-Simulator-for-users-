@@ -425,16 +425,28 @@ export default function App() {
     if (amoreMode !== 'custom') return;
     setAmoreServices(prev => prev.map(s => {
       switch (s.id) {
-        case '1':   return { ...s, isSelected: true, minPrice: amoreAddons.sulyarYitPat ? 120000 : 105000, currentPrice: amoreAddons.sulyarYitPat ? Math.max(s.currentPrice, 120000) : s.currentPrice };
-        case '2':   return { ...s, isSelected: true };
-        case 'dress': return { ...s, isSelected: true, minPrice: amoreAddons.dressCount >= 2 ? 55000 : 35000, currentPrice: amoreAddons.dressCount >= 2 ? Math.max(s.currentPrice, 55000) : Math.min(s.currentPrice, 75000) };
-        case 'makeup': return { ...s, isSelected: true, minPrice: amoreAddons.makeupRehearsal ? 35000 : 25000, maxPrice: amoreAddons.makeupRehearsal ? 85000 : 55000 };
-        case 'amore_bouquet': return { ...s, isSelected: amoreAddons.realBouquet, currentPrice: addonPrices.realBouquet };
-        case 'amore_guest_fl': return { ...s, isSelected: amoreAddons.guestFlowers, quantity: Math.ceil(venueInfo.guestCount / 10) };
-        case 'amore_main_fl': return { ...s, isSelected: true, currentPrice: 70000 };
-        case 'webinv':   return { ...s, isSelected: true, currentPrice: amoreAddons.placingCards ? 15000 : 10000 };
-        case 'transport':return { ...s, isSelected: true, currentPrice: 15000 };
-        default: return s;
+        // Always-included services: just mark selected, leave price to user slider
+        case '1':
+        case '2':
+        case 'dress':
+        case 'amore_main_fl':
+        case 'webinv':
+        case 'transport':
+          return { ...s, isSelected: true };
+        // Makeup: range changes with rehearsal toggle, clamp currentPrice into new range
+        case 'makeup': {
+          const newMin = amoreAddons.makeupRehearsal ? 35000 : 25000;
+          const newMax = amoreAddons.makeupRehearsal ? 85000 : 55000;
+          return { ...s, isSelected: true, minPrice: newMin, maxPrice: newMax,
+                   currentPrice: Math.min(Math.max(s.currentPrice, newMin), newMax) };
+        }
+        // Optional services: toggled by questionnaire answers
+        case 'amore_bouquet':
+          return { ...s, isSelected: amoreAddons.realBouquet, currentPrice: addonPrices.realBouquet };
+        case 'amore_guest_fl':
+          return { ...s, isSelected: amoreAddons.guestFlowers, quantity: Math.ceil(venueInfo.guestCount / 10) };
+        default:
+          return s;
       }
     }));
   }, [amoreMode, amoreAddons, addonPrices, venueInfo.guestCount]);
@@ -457,9 +469,9 @@ export default function App() {
   const getAmoreOptionText = (service: AmoreService) => {
     const configs: Record<string, Record<string, string>> = {
       '1': {
-        en: service.currentPrice >= 120000 ? "Sulryar yit pat burmese style included." : (service.currentPrice >= 115000 ? "Includes chapel style." : "Standard planning without chapel."),
-        ja: service.currentPrice >= 120000 ? "ミャンマー伝統儀式（スリヤ・イッパ）対応。" : (service.currentPrice >= 115000 ? "チャペル挙式進行を含む。" : "スタンダードな披露宴のみの進行。"),
-        my: service.currentPrice >= 120000 ? "မြန်မာရိုးရာ စုလျားရစ်ပတ် မင်္ဂလာအခမ်းအနား ပါဝင်သည်။" : (service.currentPrice >= 115000 ? "ဝတ်ပြုဆောင် အစီအစဉ် ပါဝင်သည်။" : "ခန်းမအတွင်း အစီအစဉ်သာ ပါဝင်သည်။")
+        en: amoreAddons.sulyarYitPat ? "Includes Sulryar Yit Pat (Myanmar ceremony)." : "Standard planning & MC.",
+        ja: amoreAddons.sulyarYitPat ? "ミャンマー伝統儀式（スリヤ・イッパ）対応。" : "スタンダードな披露宴進行のみ。",
+        my: amoreAddons.sulyarYitPat ? "မြန်မာရိုးရာ စုလျားရစ်ပတ် မင်္ဂလာအခမ်းအနား ပါဝင်သည်။" : "ပွဲတော် စီစဉ်မှုနှင့် MC ဝန်ဆောင်မှု"
       },
       'amore_main_fl': {
         en: service.currentPrice >= 120000 ? "One Rank Up Luxury Floral" : "Standard Main Table Arrangement",
@@ -467,19 +479,24 @@ export default function App() {
         my: service.currentPrice >= 120000 ? "အဆင့်မြင့် ပန်းအလှဆင်မှု" : "စံနှုန်းမီ ပင်မစားပွဲ ပန်းအလှဆင်မှု"
       },
       '2': {
-        en: service.currentPrice >= 150000 ? "Full HD Quality / Premium Cuts" : "Standard Day-of Recording",
-        ja: service.currentPrice >= 150000 ? "高画質フルHD / プレミアム編集" : "標準当日記録撮影",
-        my: service.currentPrice >= 150000 ? "Full HD အရည်အသွေးမြင့် မှတ်တမ်း" : "စံနှုန်းမီ မင်္ဂလာပွဲနေ့ မှတ်တမ်း"
+        en: amoreAddons.photoUpgrade ? "Upgraded photo/video size included." : "Standard day-of recording.",
+        ja: amoreAddons.photoUpgrade ? "フォトサイズアップグレード込み。" : "標準当日記録撮影。",
+        my: amoreAddons.photoUpgrade ? "ဓာတ်ပုံ/ဗီဒီယို အဆင့်မြင့် ပါဝင်သည်။" : "စံနှုန်းမီ မင်္ဂလာပွဲနေ့ မှတ်တမ်း"
       },
       'dress': {
-        en: service.currentPrice >= 50000 ? "2 dresses and accessories set" : "One dress and accessories set",
-        ja: service.currentPrice >= 50000 ? "ドレス2点と小物一式のセット" : "ドレス1点と小物一式のセット",
-        my: service.currentPrice >= 50000 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
+        en: amoreAddons.dressCount >= 2 ? "2 dresses + groom suit with accessories." : "1 dress + groom suit with accessories.",
+        ja: amoreAddons.dressCount >= 2 ? "ドレス2点 & タキシードと小物一式のセット。" : "ドレス1点 & タキシードと小物一式のセット。",
+        my: amoreAddons.dressCount >= 2 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
       },
       'makeup': {
-        en: service.currentPrice >= 70000 ? "2 looks with trial rehearsal" : (service.currentPrice >= 50000 ? "With trial rehearsal included" : "One standard bridal look"),
-        ja: service.currentPrice >= 70000 ? "ヘアメイク2スタイル（リハーサル込）" : (service.currentPrice >= 50000 ? "ヘアメイク1スタイル（リハーサル込）" : "当日ヘアメイクのみ"),
-        my: service.currentPrice >= 70000 ? "အလှပြင် ၂ မျိုး (အစမ်းပြင်ဆင်မှု ပါဝင်)" : (service.currentPrice >= 50000 ? "အလှပြင် ၁ မျိုး (အစမ်းပြင်ဆင်မှု ပါဝင်)" : "မင်္ဂလာပွဲနေ့ အလှပြင်ခြင်း")
+        en: amoreAddons.makeupRehearsal ? "With makeup rehearsal included." : "Day-of bridal makeup only.",
+        ja: amoreAddons.makeupRehearsal ? "ヘアメイクリハーサル込み。" : "当日ヘアメイクのみ。",
+        my: amoreAddons.makeupRehearsal ? "အစမ်းပြင်ဆင်မှု ပါဝင်သည်။" : "မင်္ဂလာပွဲနေ့ အလှပြင်ခြင်း"
+      },
+      'webinv': {
+        en: amoreAddons.placingCards ? `Web invitation + place cards (¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/person).` : "Web invitation & seating chart.",
+        ja: amoreAddons.placingCards ? `Web招待状 + 席札（¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/人）。` : "Web招待状 & 席次ボード。",
+        my: amoreAddons.placingCards ? `Web ဖိတ်စာ + နေရာကတ်ပြား (¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/ဦး)။` : "Web ဖိတ်စာနှင့် ဧည့်သည်နေရာပြ ဘုတ်"
       }
     };
 
@@ -595,6 +612,16 @@ export default function App() {
     ));
   };
 
+  // Addon-inclusive price for each service (base slider + questionnaire addons on top)
+  const getEffectivePrice = (service: AmoreService): number => {
+    let p = service.currentPrice;
+    if (service.id === 'dress' && amoreAddons.dressCount >= 2) p += AMORE_ADDON_CONFIG.dressSecond;
+    if (service.id === '1'     && amoreAddons.sulyarYitPat)    p += AMORE_ADDON_CONFIG.sulyarYitPat;
+    if (service.id === '2'     && amoreAddons.photoUpgrade)    p += addonPrices.photoUpgrade;
+    if (service.id === 'webinv'&& amoreAddons.placingCards)    p += venueInfo.guestCount * AMORE_ADDON_CONFIG.placingCardPerPerson;
+    return p;
+  };
+
   // ── Totals ──
   const venueFoodTotal  = foodPricePerPerson * venueInfo.guestCount;
   const venueDrinkTotal = drinksIncluded ? drinkPricePerPerson * venueInfo.guestCount : 0;
@@ -609,7 +636,7 @@ export default function App() {
   if (amoreMode === 'standard') {
     amoreSubtotal = AMORE_STANDARD_PRETAX;
   } else if (amoreMode === 'custom') {
-    amoreSubtotal = amoreServices.filter(s => s.isSelected).reduce((sum, s) => sum + s.currentPrice * (s.quantity || 1), 0);
+    amoreSubtotal = amoreServices.filter(s => s.isSelected).reduce((sum, s) => sum + getEffectivePrice(s) * (s.quantity || 1), 0);
     if (amoreAddons.aisleFlower) amoreSubtotal += addonPrices.aisleFlower;
   }
   
@@ -1076,26 +1103,40 @@ export default function App() {
                        const isPerTable = service.id === 'amore_guest_fl';
                        const localizedName = getServiceName(service.id);
                        const qty = service.quantity || 1;
+                       const effectivePrice = getEffectivePrice(service);
+                       const addonAmt = effectivePrice - service.currentPrice;
+                       const optionNote = getAmoreOptionText(service);
                        return (
-                         <div key={service.id} className="bg-white rounded-[2rem] border-2 border-amore-100 shadow-sm p-5 space-y-4">
+                         <div key={service.id} className="bg-white rounded-[2rem] border-2 border-amore-100 shadow-sm p-5 space-y-3">
                            <div className="flex justify-between items-start">
                              <h4 className="font-serif text-sm font-bold text-gray-900 leading-tight flex-1 pr-2">{localizedName}</h4>
                              <span className="text-[9px] bg-amore-100 text-amore-600 rounded-full px-2 py-0.5 font-black uppercase shrink-0">自動設定</span>
                            </div>
+                           {optionNote && (
+                             <p className="text-[10px] text-amore-600 italic">{optionNote}</p>
+                           )}
                            <div className="bg-gray-50 rounded-xl p-3 space-y-3">
-                             <div className="flex justify-between text-xs">
-                               <span className="text-gray-500">{t.qualityVolume}</span>
-                               <span className="font-mono font-bold text-amore-600">¥{service.currentPrice.toLocaleString()}{isPerTable ? ` × ${qty} 卓` : ''}</span>
+                             <div className="flex justify-between items-center text-xs">
+                               <span className="text-gray-500">基本価格</span>
+                               <div className="text-right">
+                                 <span className="font-mono font-bold text-gray-700">¥{service.currentPrice.toLocaleString()}{isPerTable ? ` × ${qty}卓` : ''}</span>
+                                 {addonAmt > 0 && (
+                                   <span className="ml-1.5 text-[10px] bg-amore-100 text-amore-600 font-bold px-1.5 py-0.5 rounded-full">+¥{addonAmt.toLocaleString()}</span>
+                                 )}
+                               </div>
                              </div>
-                             <input type="range" min={service.minPrice} max={service.maxPrice} step={5000}
+                             <input type="range" min={service.minPrice} max={service.maxPrice}
+                               step={service.id === 'amore_guest_fl' ? 500 : 5000}
                                value={service.currentPrice} onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
                              <div className="flex justify-between text-[9px] text-gray-400 font-mono">
-                               <span>¥{service.minPrice.toLocaleString()}</span><span>¥{service.maxPrice.toLocaleString()}</span>
+                               <span>¥{(service.minPrice + addonAmt).toLocaleString()}</span>
+                               <span>¥{(service.maxPrice + addonAmt).toLocaleString()}</span>
                              </div>
                            </div>
-                           <div className="text-right font-mono font-bold text-sm text-gray-800">
-                             ¥{(service.currentPrice * qty).toLocaleString()}
+                           <div className="flex justify-between items-center border-t border-gray-100 pt-2">
+                             <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">小計</span>
+                             <span className="font-mono font-bold text-sm text-amore-700">¥{(effectivePrice * qty).toLocaleString()}</span>
                            </div>
                          </div>
                        );
@@ -1538,14 +1579,15 @@ export default function App() {
                       amoreServices.filter(s => s.isSelected).forEach(service => {
                         const jaName = AMORE_TEMPLATE_NAMES[service.id] || service.name;
                         const qty = service.quantity || 1;
-                        const total = service.currentPrice * qty;
+                        const ep = getEffectivePrice(service);
+                        const total = ep * qty;
                         rows.push(
                           <tr key={service.id} className="even:bg-gray-50 bg-rose-50/30">
                             <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
                             <td className="border border-gray-300 px-3 py-1.5 text-amore-700">{jaName}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">{qty}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">式</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{service.currentPrice.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{ep.toLocaleString()}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{total.toLocaleString()}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
                           </tr>
