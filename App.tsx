@@ -48,13 +48,23 @@ const FOOD_PLANS: Record<FoodPlanType, { ja: string; en: string; minPrice: numbe
   tableshare: { ja: 'テーブルシェア', en: 'Table Share',  minPrice: 9000,  maxPrice: 15000, defaultPrice: 11000 },
   buffet:     { ja: 'ビュッフェ',   en: 'Buffet',       minPrice: 7000,  maxPrice: 12000, defaultPrice: 9000  },
 };
+// Mandatory venue items — always included, user adjusts price only
+const VENUE_MANDATORY_ITEMS = [
+  { id: 'mand_venue',  ja: '会場使用料',                  en: 'Venue Rental Fee',          minPrice:  50000, maxPrice: 200000, defaultPrice: 100000, unit: '式' },
+  { id: 'mand_bridal', ja: 'ブライズ利用料',              en: 'Bridal Room Usage',         minPrice:  20000, maxPrice:  50000, defaultPrice:  30000, unit: '式' },
+  { id: 'mand_sound',  ja: '音響・照明（オペレーター込み）', en: 'Sound & Lighting (w/ Op.)', minPrice:  50000, maxPrice: 120000, defaultPrice:  60000, unit: '式' },
+  { id: 'mand_staff',  ja: 'スタッフなど',                en: 'Staff Services',            minPrice:  20000, maxPrice:  80000, defaultPrice:  30000, unit: '式' },
+];
 const VENUE_OPTIONAL_ITEMS = [
-  { id: 'opt_bridal',   ja: 'ブライズ利用料',          en: 'Bridal Room Usage',          minPrice: 30000, maxPrice:  50000, defaultPrice: 35000, isPerGuest: false, unit: '式' },
-  { id: 'opt_attend',   ja: '介添え',                  en: 'Wedding Attendant',          minPrice: 20000, maxPrice:  40000, defaultPrice: 25000, isPerGuest: false, unit: '式' },
-  { id: 'opt_sound',    ja: '音響・照明（オペレーター込み）', en: 'Sound & Lighting (w/ Op.)', minPrice: 50000, maxPrice: 120000, defaultPrice: 60000, isPerGuest: false, unit: '式' },
-  { id: 'opt_staff',    ja: 'スタッフなど',             en: 'Staff Services',             minPrice: 30000, maxPrice:  80000, defaultPrice: 40000, isPerGuest: false, unit: '式' },
-  { id: 'opt_favor',    ja: '引出物（スタンダード）',   en: 'Wedding Favors',             minPrice:  2000, maxPrice:   5000, defaultPrice:  3000, isPerGuest: true,  unit: '個' },
-  { id: 'opt_gift',     ja: 'プチギフト',               en: 'Mini Gift',                  minPrice:   500, maxPrice:   1000, defaultPrice:   700, isPerGuest: true,  unit: '人' },
+  { id: 'opt_attend',    ja: '介添え',              en: 'Wedding Attendant',     minPrice: 20000, maxPrice:  40000, defaultPrice: 25000, isPerGuest: false, unit: '式' },
+  { id: 'opt_favor',    ja: '引出物（スタンダード）', en: 'Wedding Favors',        minPrice:  2000, maxPrice:   5000, defaultPrice:  3000, isPerGuest: true,  unit: '個' },
+  { id: 'opt_gift',     ja: 'プチギフト',            en: 'Mini Gift',             minPrice:   500, maxPrice:   1000, defaultPrice:   700, isPerGuest: true,  unit: '人' },
+  { id: 'opt_champagne',ja: 'シャンパンタワー',       en: 'Champagne Tower',       minPrice: 30000, maxPrice:  80000, defaultPrice: 50000, isPerGuest: false, unit: '式' },
+  { id: 'opt_cake',     ja: 'ウェディングケーキ',     en: 'Wedding Cake',          minPrice: 30000, maxPrice:  80000, defaultPrice: 50000, isPerGuest: false, unit: '式' },
+  { id: 'opt_lobby',    ja: 'ロビー演出',            en: 'Lobby Decoration',      minPrice: 20000, maxPrice:  50000, defaultPrice: 30000, isPerGuest: false, unit: '式' },
+  { id: 'opt_extend',   ja: '延長料金',              en: 'Time Extension Fee',    minPrice: 20000, maxPrice:  50000, defaultPrice: 30000, isPerGuest: false, unit: '時間' },
+  { id: 'opt_carpet',   ja: 'レッドカーペット',       en: 'Red Carpet',            minPrice: 10000, maxPrice:  30000, defaultPrice: 15000, isPerGuest: false, unit: '式' },
+  { id: 'opt_preptime', ja: '準備時間の追加',         en: 'Additional Prep Time',  minPrice: 10000, maxPrice:  30000, defaultPrice: 15000, isPerGuest: false, unit: '時間' },
 ];
 const AMORE_STANDARD_PRETAX = 370000;
 const AMORE_STANDARD_INCLUDES = [
@@ -376,7 +386,9 @@ export default function App() {
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
 
   // Venue section state
-  const [venuePackagePrice, setVenuePackagePrice] = useState(200000);
+  const [mandatoryPrices, setMandatoryPrices] = useState<Record<string, number>>(
+    Object.fromEntries(VENUE_MANDATORY_ITEMS.map(i => [i.id, i.defaultPrice]))
+  );
   const [foodPlan, setFoodPlan] = useState<FoodPlanType>('course');
   const [foodPricePerPerson, setFoodPricePerPerson] = useState(13000);
   const [drinksIncluded, setDrinksIncluded] = useState(true);
@@ -630,7 +642,8 @@ export default function App() {
     const item = VENUE_OPTIONAL_ITEMS.find(i => i.id === id);
     return item ? sum + (item.isPerGuest ? price * venueInfo.guestCount : price) : sum;
   }, 0);
-  const venueSubtotal = venuePackagePrice + venueFoodTotal + venueDrinkTotal + venueChildTotal + venueOptTotal;
+  const venueMandatoryTotal = VENUE_MANDATORY_ITEMS.reduce((sum, item) => sum + (mandatoryPrices[item.id] ?? item.defaultPrice), 0);
+  const venueSubtotal = venueMandatoryTotal + venueFoodTotal + venueDrinkTotal + venueChildTotal + venueOptTotal;
 
   let amoreSubtotal = 0;
   if (amoreMode === 'standard') {
@@ -739,31 +752,54 @@ export default function App() {
              <p className="text-gray-500 text-sm">Venue Cost Setup</p>
            </header>
 
-           {/* ── Section 1: Venue Package ── */}
+           {/* ── Section 1: Venue Package (mandatory items) ── */}
            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 sm:p-10 space-y-6">
              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">1</div>
                <div>
                  <h3 className="font-bold text-gray-900">会場パッケージ料金</h3>
-                 <p className="text-xs text-gray-400">Venue Package Fee — パッケージプラン（固定費）</p>
+                 <p className="text-xs text-gray-400">Venue Package — 必須項目（全て含まれます）</p>
                </div>
              </div>
-             <div className="bg-gray-50 rounded-[1.5rem] p-6 space-y-4">
-               <div className="flex justify-between items-baseline">
-                 <span className="text-xs font-black uppercase text-gray-400 tracking-widest">会場使用料</span>
-                 <div className="text-right">
-                   <div className="text-3xl font-serif font-bold text-amore-600">¥{venuePackagePrice.toLocaleString()}</div>
-                   <div className="text-[10px] text-gray-400 uppercase font-black">1式</div>
-                 </div>
-               </div>
-               <input type="range" min={150000} max={300000} step={5000} value={venuePackagePrice}
-                 onChange={e => setVenuePackagePrice(Number(e.target.value))}
-                 className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
-               <div className="flex justify-between text-xs text-gray-400 font-mono">
-                 <span>¥150,000</span><span>¥300,000</span>
-               </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               {VENUE_MANDATORY_ITEMS.map(item => {
+                 const price = mandatoryPrices[item.id] ?? item.defaultPrice;
+                 return (
+                   <div key={item.id} className="rounded-2xl border-2 border-amore-200 bg-amore-50/30 overflow-hidden">
+                     <div className="p-4 flex items-center justify-between">
+                       <div>
+                         <div className="font-medium text-sm text-gray-800">{item.ja}</div>
+                         <div className="text-[10px] text-gray-400 mt-0.5">¥{item.minPrice.toLocaleString()}–¥{item.maxPrice.toLocaleString()}</div>
+                       </div>
+                       <div className="flex items-center gap-2 shrink-0">
+                         <span className="text-[9px] bg-amore-100 text-amore-600 font-black px-2 py-0.5 rounded-full uppercase tracking-wide">必須</span>
+                         <div className="w-8 h-8 rounded-full bg-amore-500 text-white flex items-center justify-center shrink-0">
+                           <Check size={14} />
+                         </div>
+                       </div>
+                     </div>
+                     <div className="px-4 pb-4 space-y-2">
+                       <div className="flex justify-between text-xs">
+                         <span className="text-gray-500">¥{price.toLocaleString()} / 式</span>
+                         <span className="font-mono font-bold text-amore-600">¥{price.toLocaleString()}</span>
+                       </div>
+                       <input type="range" min={item.minPrice} max={item.maxPrice} step={5000}
+                         value={price}
+                         onChange={e => setMandatoryPrices(prev => ({...prev, [item.id]: Number(e.target.value)}))}
+                         className="w-full h-2 bg-white rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                       <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                         <span>¥{item.minPrice.toLocaleString()}</span><span>¥{item.maxPrice.toLocaleString()}</span>
+                       </div>
+                     </div>
+                   </div>
+                 );
+               })}
              </div>
-             <p className="text-xs text-gray-400 italic">※ 会場によって異なります。実際の見積は直接会場にご確認ください。</p>
+             <div className="flex justify-between items-center border-t border-amore-100 pt-3">
+               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Section 1 小計</span>
+               <span className="font-mono font-bold text-amore-700">¥{venueMandatoryTotal.toLocaleString()}</span>
+             </div>
+             <p className="text-xs text-gray-400 italic">※ スライダーで会場ごとの参考価格に調整してください。</p>
            </div>
 
            {/* ── Section 2: Food & Drink ── */}
@@ -1243,10 +1279,15 @@ export default function App() {
                      <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
                    </div>
                    <div className="space-y-5">
-                     <div className="flex justify-between items-baseline">
-                       <span className="font-serif text-lg sm:text-xl text-gray-800">パッケージプラン</span>
-                       <span className="font-mono font-bold text-base sm:text-lg">¥{venuePackagePrice.toLocaleString()}</span>
-                     </div>
+                     {VENUE_MANDATORY_ITEMS.map(item => {
+                       const price = mandatoryPrices[item.id] ?? item.defaultPrice;
+                       return (
+                         <div key={item.id} className="flex justify-between items-baseline">
+                           <span className="font-serif text-lg sm:text-xl text-gray-800">{item.ja}</span>
+                           <span className="font-mono font-bold text-base sm:text-lg">¥{price.toLocaleString()}</span>
+                         </div>
+                       );
+                     })}
                      <div className="flex justify-between items-baseline">
                        <div className="flex flex-col">
                          <span className="font-serif text-lg sm:text-xl text-gray-800">お食事（{FOOD_PLANS[foodPlan].ja}）</span>
@@ -1560,7 +1601,10 @@ export default function App() {
                     let no = 1;
                     // Venue line items
                     const venueLineItems = [
-                      { id: 'venue_pkg', name: 'パッケージプラン', qty: 1, unit: '式', unitPrice: venuePackagePrice },
+                      ...VENUE_MANDATORY_ITEMS.map(item => ({
+                        id: item.id, name: item.ja, qty: 1, unit: item.unit,
+                        unitPrice: mandatoryPrices[item.id] ?? item.defaultPrice
+                      })),
                       { id: 'venue_food', name: `お食事（${FOOD_PLANS[foodPlan].ja}）`, qty: venueInfo.guestCount, unit: '人', unitPrice: foodPricePerPerson },
                       ...(drinksIncluded ? [{ id: 'venue_drink', name: 'ドリンク', qty: venueInfo.guestCount, unit: '人', unitPrice: drinkPricePerPerson }] : []),
                       ...(childCount > 0 ? [{ id: 'venue_child', name: 'お子様料金', qty: childCount, unit: '人', unitPrice: CHILD_PRICE }] : []),
