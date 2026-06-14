@@ -779,12 +779,30 @@ export default function App() {
                        </div>
                      </div>
                      <div className="px-4 pb-4 space-y-2">
-                       <div className="flex justify-between text-xs">
-                         <span className="text-gray-500">¥{price.toLocaleString()} / 式</span>
-                         <span className="font-mono font-bold text-amore-600">¥{price.toLocaleString()}</span>
+                       <div className="flex justify-between items-center text-xs">
+                         <span className="text-gray-500">/ {item.unit}</span>
+                         <div className="flex items-center gap-1">
+                           <span className="text-gray-400 font-mono">¥</span>
+                           <input
+                             type="number"
+                             min={item.minPrice}
+                             max={item.maxPrice}
+                             step={1000}
+                             value={price}
+                             onChange={e => {
+                               const v = Number(e.target.value);
+                               if (!isNaN(v)) setMandatoryPrices(prev => ({...prev, [item.id]: v}));
+                             }}
+                             onBlur={e => {
+                               const v = Math.min(item.maxPrice, Math.max(item.minPrice, Number(e.target.value) || item.defaultPrice));
+                               setMandatoryPrices(prev => ({...prev, [item.id]: v}));
+                             }}
+                             className="w-28 text-right font-mono font-bold text-amore-600 bg-transparent border-b border-amore-200 focus:outline-none focus:border-amore-500"
+                           />
+                         </div>
                        </div>
                        <input type="range" min={item.minPrice} max={item.maxPrice} step={5000}
-                         value={price}
+                         value={Math.min(item.maxPrice, Math.max(item.minPrice, price))}
                          onChange={e => setMandatoryPrices(prev => ({...prev, [item.id]: Number(e.target.value)}))}
                          className="w-full h-2 bg-white rounded-lg appearance-none cursor-pointer accent-amore-500" />
                        <div className="flex justify-between text-[9px] text-gray-400 font-mono">
