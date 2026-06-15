@@ -400,7 +400,8 @@ export default function App() {
   // Amore section state
   const [amoreMode, setAmoreMode] = useState<'standard' | 'custom' | null>(null);
   const [amoreAddons, setAmoreAddons] = useState({
-    dressCount: 1, sulyarYitPat: false, makeupRehearsal: true,
+    dressCount: 1 as 0 | 1 | 2, sulyarYitPat: false,
+    makeupRehearsal: true, makeupLooks: 1 as 1 | 2,
     realBouquet: false, guestFlowers: false, placingCards: false,
     photoUpgrade: false, aisleFlower: false,
   });
@@ -440,15 +441,23 @@ export default function App() {
         // Always-included services: just mark selected, leave price to user slider
         case '1':
         case '2':
-        case 'dress':
         case 'amore_main_fl':
         case 'webinv':
         case 'transport':
           return { ...s, isSelected: true };
-        // Makeup: range changes with rehearsal toggle, clamp currentPrice into new range
+        // Dress: can be excluded (なし = dressCount 0)
+        case 'dress':
+          return { ...s, isSelected: amoreAddons.dressCount > 0 };
+        // Makeup: range driven by look count × rehearsal toggle
         case 'makeup': {
-          const newMin = amoreAddons.makeupRehearsal ? 35000 : 25000;
-          const newMax = amoreAddons.makeupRehearsal ? 85000 : 55000;
+          const ranges: Record<string, [number, number]> = {
+            '1':  [25000,  55000],
+            '1R': [35000,  85000],
+            '2':  [45000,  90000],
+            '2R': [55000, 110000],
+          };
+          const key = `${amoreAddons.makeupLooks}${amoreAddons.makeupRehearsal ? 'R' : ''}`;
+          const [newMin, newMax] = ranges[key];
           return { ...s, isSelected: true, minPrice: newMin, maxPrice: newMax,
                    currentPrice: Math.min(Math.max(s.currentPrice, newMin), newMax) };
         }
@@ -496,14 +505,14 @@ export default function App() {
         my: amoreAddons.photoUpgrade ? "ဓာတ်ပုံ/ဗီဒီယို အဆင့်မြင့် ပါဝင်သည်။" : "စံနှုန်းမီ မင်္ဂလာပွဲနေ့ မှတ်တမ်း"
       },
       'dress': {
-        en: amoreAddons.dressCount >= 2 ? "2 dresses + groom suit with accessories." : "1 dress + groom suit with accessories.",
-        ja: amoreAddons.dressCount >= 2 ? "ドレス2点 & タキシードと小物一式のセット。" : "ドレス1点 & タキシードと小物一式のセット。",
-        my: amoreAddons.dressCount >= 2 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
+        en: amoreAddons.dressCount === 0 ? "No dress rental — excluded from total." : amoreAddons.dressCount >= 2 ? "2 dresses + groom suit with accessories." : "1 dress + groom suit with accessories.",
+        ja: amoreAddons.dressCount === 0 ? "衣装なし（合計から除外）。" : amoreAddons.dressCount >= 2 ? "ドレス2点 & タキシードと小物一式のセット。" : "ドレス1点 & タキシードと小物一式のセット。",
+        my: amoreAddons.dressCount === 0 ? "ဝတ်စုံ မပါ (စုစုပေါင်းမှ ဖယ်ထုတ်)" : amoreAddons.dressCount >= 2 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
       },
       'makeup': {
-        en: amoreAddons.makeupRehearsal ? "With makeup rehearsal included." : "Day-of bridal makeup only.",
-        ja: amoreAddons.makeupRehearsal ? "ヘアメイクリハーサル込み。" : "当日ヘアメイクのみ。",
-        my: amoreAddons.makeupRehearsal ? "အစမ်းပြင်ဆင်မှု ပါဝင်သည်။" : "မင်္ဂလာပွဲနေ့ အလှပြင်ခြင်း"
+        en: `Bridal hair & makeup — ${amoreAddons.makeupLooks === 2 ? '2 looks' : '1 look'}${amoreAddons.makeupRehearsal ? ' + rehearsal' : ''}.`,
+        ja: `ヘアメイク（新婦）— ${amoreAddons.makeupLooks === 2 ? '2ルック' : '1ルック'}${amoreAddons.makeupRehearsal ? ' + リハーサル込み' : ''}。`,
+        my: `မင်္ဂလာပွဲနေ့ ဆံပင်/အလှပြင် — ${amoreAddons.makeupLooks === 2 ? '၂ ကြိမ်' : '၁ ကြိမ်'}${amoreAddons.makeupRehearsal ? ' + အစမ်းပါ' : ''}`,
       },
       'webinv': {
         en: amoreAddons.placingCards ? `Web invitation + place cards (¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/person).` : "Web invitation & seating chart.",
@@ -1021,12 +1030,16 @@ export default function App() {
 
                  {/* Dress count */}
                  <div className="flex items-center justify-between py-4">
-                   <div><div className="text-sm font-medium text-gray-800">ドレスの数</div><div className="text-[10px] text-gray-400">2着目 +¥{AMORE_ADDON_CONFIG.dressSecond.toLocaleString()}</div></div>
+                   <div><div className="text-sm font-medium text-gray-800">衣装レンタル</div><div className="text-[10px] text-gray-400">なし → 合計から除外 / 2着目 +¥{AMORE_ADDON_CONFIG.dressSecond.toLocaleString()}</div></div>
                    <div className="flex gap-2">
-                     {([1,2] as const).map(n => (
+                     {([0,1,2] as const).map(n => (
                        <button key={n} onClick={() => setAmoreAddons(p => ({...p, dressCount: n}))}
-                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.dressCount === n ? 'bg-amore-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                         {n}着{n===2?'+':''}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                           amoreAddons.dressCount === n
+                             ? n === 0 ? 'bg-gray-400 text-white shadow-sm' : 'bg-amore-500 text-white shadow-sm'
+                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                         }`}>
+                         {n === 0 ? 'なし' : `${n}着${n===2?'+':''}`}
                        </button>
                      ))}
                    </div>
@@ -1045,14 +1058,27 @@ export default function App() {
                    </div>
                  </div>
 
+                 {/* Makeup looks */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">ヘアメイク ルック数</div><div className="text-[10px] text-gray-400">1 look / 2 looks — 自動価格反映</div></div>
+                   <div className="flex gap-2">
+                     {([1,2] as const).map(n => (
+                       <button key={n} onClick={() => setAmoreAddons(p => ({...p, makeupLooks: n}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.makeupLooks===n ? 'bg-amore-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                         {n} look{n===2?'s':''}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+
                  {/* Makeup rehearsal */}
                  <div className="flex items-center justify-between py-4">
-                   <div><div className="text-sm font-medium text-gray-800">ヘアメイクリハーサル</div><div className="text-[10px] text-gray-400">Makeup rehearsal included</div></div>
+                   <div><div className="text-sm font-medium text-gray-800">ヘアメイク リハーサル</div><div className="text-[10px] text-gray-400">リハーサルあり → 価格レンジが上がります</div></div>
                    <div className="flex gap-2">
                      {([true,false] as const).map(v => (
                        <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, makeupRehearsal: v}))}
                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.makeupRehearsal===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                         {v?'含む':'含まない'}
+                         {v?'あり':'なし'}
                        </button>
                      ))}
                    </div>
@@ -1154,6 +1180,7 @@ export default function App() {
                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">選択内容に基づく自動設定価格 — Fine-tune if needed</h3>
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                      {amoreServices.filter(s => s.isSelected).map(service => {
+
                        const isPerTable = service.id === 'amore_guest_fl';
                        const localizedName = getServiceName(service.id);
                        const qty = service.quantity || 1;
@@ -1196,6 +1223,15 @@ export default function App() {
                        );
                      })}
                    </div>
+                   {/* Excluded services list */}
+                   {amoreServices.some(s => !s.isSelected) && (
+                     <div className="flex items-start gap-2 flex-wrap pt-2 border-t border-gray-100">
+                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide shrink-0 mt-0.5">除外 / Not included:</span>
+                       {amoreServices.filter(s => !s.isSelected).map(s => (
+                         <span key={s.id} className="text-[10px] bg-gray-100 text-gray-400 rounded-full px-2 py-0.5 line-through">{getServiceName(s.id)}</span>
+                       ))}
+                     </div>
+                   )}
                  </div>
                )}
              </div>
