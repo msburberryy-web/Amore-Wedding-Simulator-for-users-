@@ -401,7 +401,7 @@ export default function App() {
   const [amoreMode, setAmoreMode] = useState<'standard' | 'custom' | null>(null);
   const [amoreAddons, setAmoreAddons] = useState({
     dressCount: 1 as 0 | 1 | 2, sulyarYitPat: false,
-    makeupRehearsal: true, makeupLooks: 1 as 1 | 2,
+    makeupRehearsal: true, makeupLooks: 1 as 0 | 1 | 2,
     realBouquet: false, guestFlowers: false, placingCards: false,
     photoUpgrade: false, aisleFlower: false,
   });
@@ -448,8 +448,9 @@ export default function App() {
         // Dress: can be excluded (なし = dressCount 0)
         case 'dress':
           return { ...s, isSelected: amoreAddons.dressCount > 0 };
-        // Makeup: range driven by look count × rehearsal toggle
+        // Makeup: can be excluded (なし = makeupLooks 0); otherwise range driven by look count × rehearsal
         case 'makeup': {
+          if (amoreAddons.makeupLooks === 0) return { ...s, isSelected: false };
           const ranges: Record<string, [number, number]> = {
             '1':  [25000,  55000],
             '1R': [35000,  85000],
@@ -510,9 +511,9 @@ export default function App() {
         my: amoreAddons.dressCount === 0 ? "ဝတ်စုံ မပါ (စုစုပေါင်းမှ ဖယ်ထုတ်)" : amoreAddons.dressCount >= 2 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
       },
       'makeup': {
-        en: `Bridal hair & makeup — ${amoreAddons.makeupLooks === 2 ? '2 looks' : '1 look'}${amoreAddons.makeupRehearsal ? ' + rehearsal' : ''}.`,
-        ja: `ヘアメイク（新婦）— ${amoreAddons.makeupLooks === 2 ? '2ルック' : '1ルック'}${amoreAddons.makeupRehearsal ? ' + リハーサル込み' : ''}。`,
-        my: `မင်္ဂလာပွဲနေ့ ဆံပင်/အလှပြင် — ${amoreAddons.makeupLooks === 2 ? '၂ ကြိမ်' : '၁ ကြိမ်'}${amoreAddons.makeupRehearsal ? ' + အစမ်းပါ' : ''}`,
+        en: amoreAddons.makeupLooks === 0 ? "No hair & makeup — excluded from total." : `Bridal hair & makeup — ${amoreAddons.makeupLooks === 2 ? '2 looks' : '1 look'}${amoreAddons.makeupRehearsal ? ' + rehearsal' : ''}.`,
+        ja: amoreAddons.makeupLooks === 0 ? "ヘアメイクなし（合計から除外）。" : `ヘアメイク（新婦）— ${amoreAddons.makeupLooks === 2 ? '2ルック' : '1ルック'}${amoreAddons.makeupRehearsal ? ' + リハーサル込み' : ''}。`,
+        my: amoreAddons.makeupLooks === 0 ? "ဆံပင်/အလှပြင် မပါ (စုစုပေါင်းမှ ဖယ်ထုတ်)" : `မင်္ဂလာပွဲနေ့ ဆံပင်/အလှပြင် — ${amoreAddons.makeupLooks === 2 ? '၂ ကြိမ်' : '၁ ကြိမ်'}${amoreAddons.makeupRehearsal ? ' + အစမ်းပါ' : ''}`,
       },
       'webinv': {
         en: amoreAddons.placingCards ? `Web invitation + place cards (¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/person).` : "Web invitation & seating chart.",
@@ -1060,12 +1061,16 @@ export default function App() {
 
                  {/* Makeup looks */}
                  <div className="flex items-center justify-between py-4">
-                   <div><div className="text-sm font-medium text-gray-800">ヘアメイク ルック数</div><div className="text-[10px] text-gray-400">1 look / 2 looks — 自動価格反映</div></div>
+                   <div><div className="text-sm font-medium text-gray-800">ヘアメイク ルック数</div><div className="text-[10px] text-gray-400">なし → 合計から除外 / 自動価格反映</div></div>
                    <div className="flex gap-2">
-                     {([1,2] as const).map(n => (
+                     {([0,1,2] as const).map(n => (
                        <button key={n} onClick={() => setAmoreAddons(p => ({...p, makeupLooks: n}))}
-                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.makeupLooks===n ? 'bg-amore-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                         {n} look{n===2?'s':''}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                           amoreAddons.makeupLooks === n
+                             ? n === 0 ? 'bg-gray-400 text-white shadow-sm' : 'bg-amore-500 text-white shadow-sm'
+                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                         }`}>
+                         {n === 0 ? 'なし' : `${n} look${n===2?'s':''}`}
                        </button>
                      ))}
                    </div>
