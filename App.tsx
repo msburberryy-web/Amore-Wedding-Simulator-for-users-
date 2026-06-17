@@ -44,9 +44,9 @@ const AMORE_TEMPLATE_NAMES: Record<string, string> = {
 // --- VENUE & AMORE CONFIG ---
 type FoodPlanType = 'course' | 'tableshare' | 'buffet';
 const FOOD_PLANS: Record<FoodPlanType, { ja: string; en: string; minPrice: number; maxPrice: number; defaultPrice: number }> = {
-  course:     { ja: 'コース料理',   en: 'Course Menu',  minPrice: 11000, maxPrice: 19000, defaultPrice: 13000 },
-  tableshare: { ja: 'テーブルシェア', en: 'Table Share',  minPrice: 9000,  maxPrice: 15000, defaultPrice: 11000 },
-  buffet:     { ja: 'ビュッフェ',   en: 'Buffet',       minPrice: 7000,  maxPrice: 12000, defaultPrice: 9000  },
+  course:     { ja: 'コース料理',   en: 'Course Menu',  minPrice: 11000, maxPrice: 30000, defaultPrice: 11000 },
+  tableshare: { ja: 'テーブルシェア', en: 'Table Share',  minPrice:  9000, maxPrice: 25000, defaultPrice:  9000 },
+  buffet:     { ja: 'ビュッフェ',   en: 'Buffet',       minPrice:  7000, maxPrice: 20000, defaultPrice:  7000 },
 };
 // Mandatory venue items — always included, user adjusts price only
 const VENUE_MANDATORY_ITEMS = [
@@ -390,7 +390,7 @@ export default function App() {
     Object.fromEntries(VENUE_MANDATORY_ITEMS.map(i => [i.id, i.defaultPrice]))
   );
   const [foodPlan, setFoodPlan] = useState<FoodPlanType>('course');
-  const [foodPricePerPerson, setFoodPricePerPerson] = useState(13000);
+  const [foodPricePerPerson, setFoodPricePerPerson] = useState(FOOD_PLANS['course'].minPrice);
   const [drinksIncluded, setDrinksIncluded] = useState(true);
   const [drinkPricePerPerson, setDrinkPricePerPerson] = useState(3800);
   const [childCount, setChildCount] = useState(0);
@@ -844,7 +844,7 @@ export default function App() {
                <p className="text-xs font-black uppercase text-gray-400 tracking-widest">料理プラン</p>
                <div className="grid grid-cols-3 gap-3">
                  {(Object.keys(FOOD_PLANS) as FoodPlanType[]).map(plan => (
-                   <button key={plan} onClick={() => { setFoodPlan(plan); setFoodPricePerPerson(FOOD_PLANS[plan].defaultPrice); }}
+                   <button key={plan} onClick={() => { setFoodPlan(plan); setFoodPricePerPerson(FOOD_PLANS[plan].minPrice); }}
                      className={`py-3 px-2 rounded-2xl border-2 text-center transition-all ${foodPlan === plan ? 'bg-white border-amore-500 shadow-md text-amore-700' : 'bg-gray-50 border-gray-100 text-gray-500 hover:border-amore-200'}`}>
                      <div className="font-bold text-xs">{FOOD_PLANS[plan].ja}</div>
                      <div className="text-[10px] text-gray-400 mt-0.5">¥{FOOD_PLANS[plan].minPrice.toLocaleString()}~</div>
@@ -879,11 +879,11 @@ export default function App() {
                      <span className="text-xs text-gray-500">フリードリンク / 人</span>
                      <span className="font-mono font-bold text-amore-600">¥{drinkPricePerPerson.toLocaleString()} × {venueInfo.guestCount} = ¥{(drinkPricePerPerson * venueInfo.guestCount).toLocaleString()}</span>
                    </div>
-                   <input type="range" min={2500} max={5000} step={100} value={drinkPricePerPerson}
+                   <input type="range" min={500} max={8000} step={100} value={drinkPricePerPerson}
                      onChange={e => setDrinkPricePerPerson(Number(e.target.value))}
                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
                    <div className="flex justify-between text-[9px] text-gray-400 font-mono">
-                     <span>¥2,500</span><span>¥5,000</span>
+                     <span>¥500</span><span>¥8,000</span>
                    </div>
                  </div>
                )}
