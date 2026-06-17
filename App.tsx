@@ -434,21 +434,16 @@ export default function App() {
   );
 
   // Addon questionnaire → service card auto-configuration
+  // Only updates price ranges / quantities and questionnaire-driven selections (dress, makeup, bouquet, guest flowers)
+  // Does NOT override isSelected for core services — those are set on mode entry and toggled by the user
   useEffect(() => {
     if (amoreMode !== 'custom') return;
     setAmoreServices(prev => prev.map(s => {
       switch (s.id) {
-        // Always-included services: just mark selected, leave price to user slider
-        case '1':
-        case '2':
-        case 'amore_main_fl':
-        case 'webinv':
-        case 'transport':
-          return { ...s, isSelected: true };
-        // Dress: can be excluded (なし = dressCount 0)
+        // Dress: questionnaire (dressCount) controls isSelected
         case 'dress':
           return { ...s, isSelected: amoreAddons.dressCount > 0 };
-        // Makeup: can be excluded (なし = makeupLooks 0); otherwise range driven by look count × rehearsal
+        // Makeup: questionnaire (makeupLooks) controls isSelected + price range
         case 'makeup': {
           if (amoreAddons.makeupLooks === 0) return { ...s, isSelected: false };
           const ranges: Record<string, [number, number]> = {
@@ -459,7 +454,7 @@ export default function App() {
           };
           const key = `${amoreAddons.makeupLooks}${amoreAddons.makeupRehearsal ? 'R' : ''}`;
           const [newMin, newMax] = ranges[key];
-          return { ...s, isSelected: true, minPrice: newMin, maxPrice: newMax,
+          return { ...s, isSelected: s.isSelected, minPrice: newMin, maxPrice: newMax,
                    currentPrice: Math.min(Math.max(s.currentPrice, newMin), newMax) };
         }
         // Optional services: toggled by questionnaire answers
@@ -467,6 +462,7 @@ export default function App() {
           return { ...s, isSelected: amoreAddons.realBouquet, currentPrice: addonPrices.realBouquet };
         case 'amore_guest_fl':
           return { ...s, isSelected: amoreAddons.guestFlowers, quantity: Math.ceil(venueInfo.guestCount / 10) };
+        // All other services: preserve user's manual isSelected toggle, update nothing
         default:
           return s;
       }
@@ -476,6 +472,12 @@ export default function App() {
   useEffect(() => {
     if (amoreMode === 'standard') {
       setAmoreServices(prev => prev.map(s => ({ ...s, isSelected: ['1','2','amore_main_fl','makeup','webinv','transport'].includes(s.id) })));
+    } else if (amoreMode === 'custom') {
+      // Set default selections on entry; user can toggle freely after this
+      setAmoreServices(prev => prev.map(s => ({
+        ...s,
+        isSelected: ['1','2','dress','amore_main_fl','makeup','webinv','transport'].includes(s.id),
+      })));
     } else if (amoreMode === null) {
       setAmoreServices(prev => prev.map(s => ({ ...s, isSelected: false })));
     }
@@ -617,13 +619,13 @@ export default function App() {
   };
 
   const toggleAmoreService = (id: string) => {
-    setAmoreServices(prev => prev.map(s => 
+    setAmoreServices(prev => prev.map(s =>
       s.id === id ? { ...s, isSelected: !s.isSelected } : s
     ));
   };
 
   const updateAmorePrice = (id: string, price: number) => {
-    setAmoreServices(prev => prev.map(s => 
+    setAmoreServices(prev => prev.map(s =>
       s.id === id ? { ...s, currentPrice: price } : s
     ));
   };
@@ -1180,65 +1182,72 @@ export default function App() {
                </div>
 
                {/* Auto-configured service cards */}
-               {amoreServices.filter(s => s.isSelected).length > 0 && (
-                 <div className="space-y-4">
-                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">選択内容に基づく自動設定価格 — Fine-tune if needed</h3>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                     {amoreServices.filter(s => s.isSelected).map(service => {
-
-                       const isPerTable = service.id === 'amore_guest_fl';
-                       const localizedName = getServiceName(service.id);
-                       const qty = service.quantity || 1;
-                       const effectivePrice = getEffectivePrice(service);
-                       const addonAmt = effectivePrice - service.currentPrice;
-                       const optionNote = getAmoreOptionText(service);
-                       return (
-                         <div key={service.id} className="bg-white rounded-[2rem] border-2 border-amore-100 shadow-sm p-5 space-y-3">
-                           <div className="flex justify-between items-start">
-                             <h4 className="font-serif text-sm font-bold text-gray-900 leading-tight flex-1 pr-2">{localizedName}</h4>
-                             <span className="text-[9px] bg-amore-100 text-amore-600 rounded-full px-2 py-0.5 font-black uppercase shrink-0">自動設定</span>
-                           </div>
-                           {optionNote && (
-                             <p className="text-[10px] text-amore-600 italic">{optionNote}</p>
-                           )}
-                           <div className="bg-gray-50 rounded-xl p-3 space-y-3">
-                             <div className="flex justify-between items-center text-xs">
-                               <span className="text-gray-500">基本価格</span>
-                               <div className="text-right">
-                                 <span className="font-mono font-bold text-gray-700">¥{service.currentPrice.toLocaleString()}{isPerTable ? ` × ${qty}卓` : ''}</span>
-                                 {addonAmt > 0 && (
-                                   <span className="ml-1.5 text-[10px] bg-amore-100 text-amore-600 font-bold px-1.5 py-0.5 rounded-full">+¥{addonAmt.toLocaleString()}</span>
-                                 )}
-                               </div>
-                             </div>
-                             <input type="range" min={service.minPrice} max={service.maxPrice}
-                               step={service.id === 'amore_guest_fl' ? 500 : 5000}
-                               value={service.currentPrice} onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
-                               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
-                             <div className="flex justify-between text-[9px] text-gray-400 font-mono">
-                               <span>¥{(service.minPrice + addonAmt).toLocaleString()}</span>
-                               <span>¥{(service.maxPrice + addonAmt).toLocaleString()}</span>
+               <div className="space-y-4">
+                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">選択内容に基づく自動設定価格 — Fine-tune if needed</h3>
+                 {amoreServices.filter(s => s.isSelected).length === 0 && (
+                   <p className="text-sm text-gray-400 italic">サービスが選択されていません。合計は ¥0 です。</p>
+                 )}
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                   {amoreServices.filter(s => s.isSelected).map(service => {
+                     const isPerTable = service.id === 'amore_guest_fl';
+                     const localizedName = getServiceName(service.id);
+                     const qty = service.quantity || 1;
+                     const effectivePrice = getEffectivePrice(service);
+                     const addonAmt = effectivePrice - service.currentPrice;
+                     const optionNote = getAmoreOptionText(service);
+                     return (
+                       <div key={service.id} className="bg-white rounded-[2rem] border-2 border-amore-100 shadow-sm p-5 space-y-3">
+                         <div className="flex justify-between items-start">
+                           <h4 className="font-serif text-sm font-bold text-gray-900 leading-tight flex-1 pr-2">{localizedName}</h4>
+                           <button onClick={() => toggleAmoreService(service.id)}
+                             title="このサービスを除外"
+                             className="w-6 h-6 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-400 flex items-center justify-center transition-all shrink-0">
+                             <X size={11} />
+                           </button>
+                         </div>
+                         {optionNote && (
+                           <p className="text-[10px] text-amore-600 italic">{optionNote}</p>
+                         )}
+                         <div className="bg-gray-50 rounded-xl p-3 space-y-3">
+                           <div className="flex justify-between items-center text-xs">
+                             <span className="text-gray-500">基本価格</span>
+                             <div className="text-right">
+                               <span className="font-mono font-bold text-gray-700">¥{service.currentPrice.toLocaleString()}{isPerTable ? ` × ${qty}卓` : ''}</span>
+                               {addonAmt > 0 && (
+                                 <span className="ml-1.5 text-[10px] bg-amore-100 text-amore-600 font-bold px-1.5 py-0.5 rounded-full">+¥{addonAmt.toLocaleString()}</span>
+                               )}
                              </div>
                            </div>
-                           <div className="flex justify-between items-center border-t border-gray-100 pt-2">
-                             <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">小計</span>
-                             <span className="font-mono font-bold text-sm text-amore-700">¥{(effectivePrice * qty).toLocaleString()}</span>
+                           <input type="range" min={service.minPrice} max={service.maxPrice}
+                             step={service.id === 'amore_guest_fl' ? 500 : 5000}
+                             value={service.currentPrice} onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
+                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                           <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                             <span>¥{(service.minPrice + addonAmt).toLocaleString()}</span>
+                             <span>¥{(service.maxPrice + addonAmt).toLocaleString()}</span>
                            </div>
                          </div>
-                       );
-                     })}
-                   </div>
-                   {/* Excluded services list */}
-                   {amoreServices.some(s => !s.isSelected) && (
-                     <div className="flex items-start gap-2 flex-wrap pt-2 border-t border-gray-100">
-                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide shrink-0 mt-0.5">除外 / Not included:</span>
-                       {amoreServices.filter(s => !s.isSelected).map(s => (
-                         <span key={s.id} className="text-[10px] bg-gray-100 text-gray-400 rounded-full px-2 py-0.5 line-through">{getServiceName(s.id)}</span>
-                       ))}
-                     </div>
-                   )}
+                         <div className="flex justify-between items-center border-t border-gray-100 pt-2">
+                           <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">小計</span>
+                           <span className="font-mono font-bold text-sm text-amore-700">¥{(effectivePrice * qty).toLocaleString()}</span>
+                         </div>
+                       </div>
+                     );
+                   })}
                  </div>
-               )}
+                 {/* Excluded services — click to re-add */}
+                 {amoreServices.some(s => !s.isSelected) && (
+                   <div className="flex items-start gap-2 flex-wrap pt-3 border-t border-gray-100">
+                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide shrink-0 mt-0.5">除外 — タップで追加:</span>
+                     {amoreServices.filter(s => !s.isSelected).map(s => (
+                       <button key={s.id} onClick={() => toggleAmoreService(s.id)}
+                         className="text-[10px] bg-gray-100 text-gray-400 hover:bg-amore-50 hover:text-amore-600 rounded-full px-2.5 py-0.5 line-through hover:no-underline transition-all">
+                         + {getServiceName(s.id)}
+                       </button>
+                     ))}
+                   </div>
+                 )}
+               </div>
              </div>
            )}
 
