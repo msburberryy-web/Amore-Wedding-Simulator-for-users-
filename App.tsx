@@ -1394,7 +1394,7 @@ export default function App() {
                  </div>
 
                  {/* ── Amore Section ── */}
-                 {amoreMode && (
+                 {amoreSubtotal > 0 && (
                    <div className="break-inside-avoid group">
                      <div className="flex items-center gap-4 mb-6">
                        <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
