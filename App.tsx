@@ -184,6 +184,20 @@ const TRANSLATIONS = {
     // Preview
     dressCostLabel: "Dress & Tuxedo",
     sectionSubtotal: "Subtotal",
+    stepDate: "Date",
+    venueCostTitle: "Venue Costs",
+    venueCostSubtitle: "Venue Cost Setup",
+    foodDrinkTitle: "Food & Drinks",
+    foodDrinkSubtitle: "Linked to guest count",
+    drinksIncluded: "Included",
+    drinksNotIncluded: "Not Included",
+    venueSliderNote: "Adjust the slider to match actual venue pricing.",
+    optionalItemsSubtitle: "Add as needed",
+    calPeak: "Peak",
+    calPopular: "Popular",
+    calDiscount: "Disc.",
+    childLabel: "Children",
+    amoreServicesTitle: "Amore Services",
     categories: {
       [QuoteCategory.VENUE_FEE]: 'Venue & Facilities',
       [QuoteCategory.FOOD_DRINK]: 'Food & Beverage',
@@ -246,6 +260,62 @@ const TRANSLATIONS = {
     serviceDetails: "サービス詳細",
     generatedOn: "作成日時",
     amoreTokyo: "Amore Wedding Tokyo",
+    // Date step
+    dateStepTitle: "挙式日程を選択",
+    dateStepSubtitle: "挙式日を選択してください — 吉日や需要情報が表示されます",
+    skipDate: "日程をスキップして次へ",
+    nextToSetup: "次へ: 基本設定",
+    legendBest: "大安 — 最良",
+    legendGood: "友引 — 吉",
+    legendBad: "仏滅/赤口 — 凶",
+    legendPeak: "繁忙 = 繁忙期加算あり",
+    legendMyanmarGood: "ミャンマー吉日（木曜）",
+    legendMyanmarAvoid: "ミャンマー避ける日",
+    demandSurcharge: "繁忙期加算",
+    discountConsult: "割引交渉をご相談ください",
+    normalPrice: "通常料金",
+    weddingDateLabel: "挙式予定日",
+    // Venue
+    venueCostTitle: "会場費用",
+    venueCostSubtitle: "会場費用設定",
+    venuePackageTitle: "会場パッケージ料金",
+    venuePackageSubtitle: "必須項目（全て含まれます）",
+    requiredBadge: "必須",
+    venueSliderNote: "スライダーで会場ごとの参考価格に調整してください。",
+    sec1Subtotal: "Section 1 小計",
+    foodDrinkTitle: "料理・飲み物",
+    foodDrinkSubtitle: "ゲスト人数に連動",
+    foodPlanLabel: "料理プラン",
+    drinksLabel: "フリードリンク",
+    drinksIncluded: "含む",
+    drinksNotIncluded: "含まない",
+    childLabel: "お子様",
+    sec2Subtotal: "Section 2 小計",
+    optionalItemsTitle: "オプション項目",
+    optionalItemsSubtitle: "必要に応じて追加",
+    sec3Subtotal: "Section 3 小計",
+    venueSubtotalLabel: "会場小計",
+    childFeeLabel: "お子様料金",
+    // Amore
+    amoreServicesTitle: "Amore サービス",
+    standardPackageTitle: "スタンダードパッケージ",
+    customModeTitle: "カスタム選択",
+    amoreConfigDesc: "Amoreサービスの構成を選択してください。",
+    serviceConfigTitle: "サービス構成を選択",
+    autoConfigDesc: "選択内容に基づいて価格が自動設定されます",
+    autoPriceTitle: "選択内容に基づく自動設定価格 — 調整可能",
+    noServicesMsg: "サービスが選択されていません。合計は ¥0 です。",
+    excludedLabel: "除外 — タップで追加:",
+    excludeServiceTitle: "このサービスを除外",
+    amoreSubtotalLabel: "Amore小計",
+    amoreServicesLabel: "Amoreサービス",
+    calPeak: "繁忙",
+    calPopular: "人気",
+    calDiscount: "割",
+    stepDate: "日程",
+    // Preview
+    dressCostLabel: "ドレス・タキシード",
+    sectionSubtotal: "小計",
     categories: {
       [QuoteCategory.VENUE_FEE]: '会場費・設備',
       [QuoteCategory.FOOD_DRINK]: '料理・飲料',
@@ -307,6 +377,62 @@ const TRANSLATIONS = {
     serviceDetails: "ဝန်ဆောင်မှု အသေးစိတ်",
     generatedOn: "ထုတ်ပေးသည့်အချိန်",
     amoreTokyo: "Amore Wedding Tokyo",
+    // Date step
+    dateStepTitle: "မင်္ဂလာဆောင်ရက် ရွေးချယ်ခြင်း",
+    dateStepSubtitle: "မင်္ဂလာဆောင်ရက် ရွေးချယ်ပါ — မင်္ဂလာကြီးသောရက်နှင့် လူစည်ကားမှုကို ကြည့်ပါ",
+    skipDate: "ရက်မရွေးဘဲ ဆက်သွားမည်",
+    nextToSetup: "ရှေ့ဆက်မည်: အခြေခံ သတ်မှတ်ချက်",
+    legendBest: "大安 — အကောင်းဆုံး",
+    legendGood: "友引 — ကောင်း",
+    legendBad: "仏滅/赤口 — ရှောင်ကြဉ်",
+    legendPeak: "繁忙 = ဈေးနှုန်းပိုဆောင်းအပ် ကိုက်သည်",
+    legendMyanmarGood: "မြန်မာ မင်္ဂလာရက် (ကြာသပတေး)",
+    legendMyanmarAvoid: "မြန်မာ ရှောင်ကြဉ်သင့်သောရက်",
+    demandSurcharge: "ဈေးနှုန်းပိုဆောင်းအပ်",
+    discountConsult: "လျော့ဈေး ညှိနှိုင်းနိုင်ပါသည် — planner ကိုမေးပါ",
+    normalPrice: "ပုံမှန်ဈေးနှုန်း",
+    weddingDateLabel: "မင်္ဂလာဆောင်ရက်",
+    // Venue
+    venueCostTitle: "ခန်းမ ကုန်ကျစရိတ်",
+    venueCostSubtitle: "ခန်းမ ကုန်ကျစရိတ် သတ်မှတ်ခြင်း",
+    venuePackageTitle: "ခန်းမ Package ကြေး",
+    venuePackageSubtitle: "မဖြစ်မနေ ပါဝင်ရမည့် အရာများ — အားလုံး ပါဝင်သည်",
+    requiredBadge: "မဖြစ်မနေ",
+    venueSliderNote: "ခန်းမနှင့်ကိုက်ညီသော ဈေးနှုန်းသို့ ညှိနှိုင်းပါ။",
+    sec1Subtotal: "အပိုင်း ၁ စုစုပေါင်း",
+    foodDrinkTitle: "အစားအသောက်နှင့် အဖျော်ယမကာ",
+    foodDrinkSubtitle: "ဧည့်သည်အရေအတွက်နှင့် ချိတ်ဆက်",
+    foodPlanLabel: "အစားအသောက် Plan",
+    drinksLabel: "အချိုရည် (ကန့်သတ်မရှိ)",
+    drinksIncluded: "ပါဝင်သည်",
+    drinksNotIncluded: "မပါ",
+    childLabel: "ကလေး",
+    sec2Subtotal: "အပိုင်း ၂ စုစုပေါင်း",
+    optionalItemsTitle: "ရွေးချယ်နိုင်သော အရာများ",
+    optionalItemsSubtitle: "လိုအပ်သလို ထည့်ပါ",
+    sec3Subtotal: "အပိုင်း ၃ စုစုပေါင်း",
+    venueSubtotalLabel: "ခန်းမ စုစုပေါင်း",
+    childFeeLabel: "ကလေး ကြေး",
+    // Amore
+    amoreServicesTitle: "Amore ဝန်ဆောင်မှုများ",
+    standardPackageTitle: "စံ Package",
+    customModeTitle: "စိတ်ကြိုက် ရွေးချယ်ခြင်း",
+    amoreConfigDesc: "Amore ဝန်ဆောင်မှုများကို မည်သို့ ပြင်ဆင်လိုသည်ကို ရွေးချယ်ပါ။",
+    serviceConfigTitle: "ဝန်ဆောင်မှု ဖွဲ့စည်းပုံ ရွေးချယ်ပါ",
+    autoConfigDesc: "ရွေးချယ်ချက်များအပေါ် ဈေးနှုန်းများ အလိုအလျောက် သတ်မှတ်ပေးသည်",
+    autoPriceTitle: "အလိုအလျောက် သတ်မှတ်ထားသော ဈေးနှုန်းများ — ညှိနှိုင်းနိုင်သည်",
+    noServicesMsg: "ဝန်ဆောင်မှု မရွေးထားပါ။ စုစုပေါင်းမှာ ¥0 ဖြစ်သည်။",
+    excludedLabel: "ဖယ်ထားသည် — ထပ်ထည့်ရန် နှိပ်ပါ:",
+    excludeServiceTitle: "ဤဝန်ဆောင်မှုကို ဖယ်ထားမည်",
+    amoreSubtotalLabel: "Amore စုစုပေါင်း",
+    amoreServicesLabel: "Amore ဝန်ဆောင်မှုများ",
+    calPeak: "မြင့်",
+    calPopular: "လူကြိုက်",
+    calDiscount: "လျော့",
+    stepDate: "ရက်",
+    // Preview
+    dressCostLabel: "ဝတ်စုံ",
+    sectionSubtotal: "စုစုပေါင်း",
     categories: {
       [QuoteCategory.VENUE_FEE]: 'ခန်းမနှင့် အဆောက်အအုံ',
       [QuoteCategory.FOOD_DRINK]: 'အစားအသောက်နှင့် အဖျော်ယမကာ',
@@ -466,16 +592,16 @@ function getMyanmarDayInfo(date: Date): { label: string; tier: 'good' | 'neutral
 }
 
 type DemandLevel = 'peak' | 'high' | 'normal' | 'low';
-function getDateDemand(date: Date): { level: DemandLevel; labelJa: string; surcharge: number } {
+function getDateDemand(date: Date): { level: DemandLevel; labelJa: string; labelEn: string; labelMy: string; surcharge: number } {
   const dow = date.getDay();
   const isWeekend = dow === 0 || dow === 6;
   const rokuyo = getRokuyoIndex(date);
-  if (rokuyo === 4 && isWeekend) return { level: 'peak',   labelJa: '大安×週末 ― 繁忙期',  surcharge: 50000 };
-  if (rokuyo === 4)              return { level: 'high',   labelJa: '大安 ― 人気',          surcharge: 20000 };
-  if (isWeekend && rokuyo === 1) return { level: 'high',   labelJa: '友引×週末',             surcharge: 20000 };
-  if (isWeekend)                 return { level: 'high',   labelJa: '週末',                  surcharge: 10000 };
-  if (rokuyo === 3 && !isWeekend)return { level: 'low',    labelJa: '仏滅 ― 割引交渉可',     surcharge: 0     };
-  return                                { level: 'normal', labelJa: '平日',                  surcharge: 0     };
+  if (rokuyo === 4 && isWeekend) return { level: 'peak',   labelJa: '大安×週末 ― 繁忙期',  labelEn: 'Taian × Weekend — Peak',       labelMy: '大安×週末 ― ဈေးနှုန်းမြင့်', surcharge: 50000 };
+  if (rokuyo === 4)              return { level: 'high',   labelJa: '大安 ― 人気',           labelEn: 'Taian — Popular',              labelMy: '大安 ― လူကြိုက်မြင့်',       surcharge: 20000 };
+  if (isWeekend && rokuyo === 1) return { level: 'high',   labelJa: '友引×週末',             labelEn: 'Tomobiki × Weekend',           labelMy: '友引×週末',                   surcharge: 20000 };
+  if (isWeekend)                 return { level: 'high',   labelJa: '週末',                  labelEn: 'Weekend',                      labelMy: 'စနေ-တနင်္ဂနွေ',              surcharge: 10000 };
+  if (rokuyo === 3 && !isWeekend)return { level: 'low',    labelJa: '仏滅 ― 割引交渉可',     labelEn: 'Butsumetsu — Discount',        labelMy: '仏滅 ― လျော့ဈေး',            surcharge: 0     };
+  return                                { level: 'normal', labelJa: '平日',                  labelEn: 'Weekday',                      labelMy: 'ရုံးဆင်းနေ့',                surcharge: 0     };
 }
 
 export default function App() {
@@ -586,6 +712,9 @@ export default function App() {
   }, [amoreMode]);
 
   const t = TRANSLATIONS[language];
+
+  const getDemandLabel = (d: ReturnType<typeof getDateDemand>) =>
+    language === 'ja' ? d.labelJa : language === 'en' ? d.labelEn : d.labelMy;
 
   const getServiceName = (id: string) => {
     const original = INITIAL_SERVICES.find(s => s.id === id);
@@ -780,7 +909,7 @@ export default function App() {
   const selectedAmoreServices = amoreServices.filter(s => s.isSelected);
 
   const steps = [
-    { id: 'date',    label: '日程',   icon: <Calendar size={16}/> },
+    { id: 'date',    label: t.stepDate, icon: <Calendar size={16}/> },
     { id: 'setup',   label: t.step1, icon: <Wallet size={16}/> },
     { id: 'catalog', label: t.step2, icon: <BookOpen size={16}/> },
     { id: 'amore',   label: t.step3, icon: <LayoutGrid size={16}/> },
@@ -831,8 +960,8 @@ export default function App() {
         <div className={activeTab === 'date' ? 'block animate-in fade-in' : 'hidden'}>
           <div className="max-w-3xl mx-auto space-y-8">
             <header className="text-center space-y-2">
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">挙式日程を選択</h2>
-              <p className="text-gray-400 text-sm">Select your wedding date — auspicious days and demand are shown below</p>
+              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">{t.dateStepTitle}</h2>
+              <p className="text-gray-400 text-sm">{t.dateStepSubtitle}</p>
             </header>
 
             <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 space-y-5">
@@ -891,9 +1020,9 @@ export default function App() {
                         {myanmar.label && (
                           <span className={`leading-none pl-0.5 ${isSelected?'text-white/80':myanmar.tier==='good'?'text-teal-500':myanmar.tier==='avoid'?'text-orange-400':'text-gray-400'}`}>{myanmar.label}</span>
                         )}
-                        {!isSelected && demand.level==='peak'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-red-500 text-white rounded px-0.5 font-black leading-tight">繁忙</span>}
-                        {!isSelected && demand.level==='high'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-orange-400 text-white rounded px-0.5 font-black leading-tight">人気</span>}
-                        {!isSelected && demand.level==='low'   && <span className="absolute top-0.5 right-0.5 text-[7px] bg-gray-300 text-gray-600 rounded px-0.5 leading-tight">割</span>}
+                        {!isSelected && demand.level==='peak'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-red-500 text-white rounded px-0.5 font-black leading-tight">{t.calPeak}</span>}
+                        {!isSelected && demand.level==='high'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-orange-400 text-white rounded px-0.5 font-black leading-tight">{t.calPopular}</span>}
+                        {!isSelected && demand.level==='low'   && <span className="absolute top-0.5 right-0.5 text-[7px] bg-gray-300 text-gray-600 rounded px-0.5 leading-tight">{t.calDiscount}</span>}
                       </button>
                     );
                   }
@@ -903,12 +1032,12 @@ export default function App() {
 
               {/* Legend */}
               <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-3 border-t border-gray-50 text-[10px] text-gray-500">
-                <span><span className="inline-block w-2 h-2 rounded-full bg-rose-400 mr-1"/>大安 — 最良</span>
-                <span><span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1"/>友引 — 吉</span>
-                <span><span className="inline-block w-2 h-2 rounded-full bg-gray-300 mr-1"/>仏滅/赤口 — 凶</span>
-                <span className="text-red-500 font-bold">繁忙 = 繁忙期加算あり</span>
-                <span className="text-teal-500">ကြာသ = ミャンマー吉日（木曜）</span>
-                <span className="text-orange-400">ရက်ကြမ်း = ミャンマー避ける日</span>
+                <span><span className="inline-block w-2 h-2 rounded-full bg-rose-400 mr-1"/>{t.legendBest}</span>
+                <span><span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1"/>{t.legendGood}</span>
+                <span><span className="inline-block w-2 h-2 rounded-full bg-gray-300 mr-1"/>{t.legendBad}</span>
+                <span className="text-red-500 font-bold">{t.legendPeak}</span>
+                <span className="text-teal-500">ကြာသ = {t.legendMyanmarGood}</span>
+                <span className="text-orange-400">ရက်ကြမ်း = {t.legendMyanmarAvoid}</span>
               </div>
             </div>
 
@@ -935,13 +1064,13 @@ export default function App() {
                   </div>
                   <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-white/60">
                     <span className={`text-sm font-bold ${demand.level==='peak'?'text-red-600':demand.level==='high'?'text-orange-600':demand.level==='low'?'text-gray-500':'text-gray-600'}`}>
-                      {demand.level==='peak'?'⚠️ ':demand.level==='high'?'📈 ':demand.level==='low'?'💡 ':''}{demand.labelJa}
+                      {demand.level==='peak'?'⚠️ ':demand.level==='high'?'📈 ':demand.level==='low'?'💡 ':''}{getDemandLabel(demand)}
                     </span>
                     {demand.surcharge > 0
-                      ? <span className="font-mono font-bold text-red-600">+¥{demand.surcharge.toLocaleString()} 繁忙期加算</span>
+                      ? <span className="font-mono font-bold text-red-600">+¥{demand.surcharge.toLocaleString()} {t.demandSurcharge}</span>
                       : demand.level==='low'
-                        ? <span className="text-xs text-gray-400">割引交渉をご相談ください</span>
-                        : <span className="text-xs text-gray-400">通常料金</span>}
+                        ? <span className="text-xs text-gray-400">{t.discountConsult}</span>
+                        : <span className="text-xs text-gray-400">{t.normalPrice}</span>}
                   </div>
                 </div>
               );
@@ -950,7 +1079,7 @@ export default function App() {
             <div className="flex justify-center pt-2">
               <button onClick={() => setActiveTab('setup')}
                 className="bg-gray-900 text-white px-10 py-4 rounded-2xl font-bold flex items-center gap-2 hover:bg-black transition-all shadow-lg group">
-                {weddingDate ? '次へ: 基本設定' : '日程をスキップして次へ'} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+                {weddingDate ? t.nextToSetup : t.skipDate} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
@@ -995,8 +1124,8 @@ export default function App() {
 
         <div className={activeTab === 'catalog' ? 'block space-y-8 animate-in slide-in-from-bottom-4' : 'hidden'}>
            <header className="text-center max-w-2xl mx-auto space-y-2">
-             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">会場費用</h2>
-             <p className="text-gray-500 text-sm">Venue Cost Setup</p>
+             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">{t.venueCostTitle}</h2>
+             <p className="text-gray-500 text-sm">{t.venueCostSubtitle}</p>
            </header>
 
            {/* ── Section 1: Venue Package (mandatory items) ── */}
@@ -1004,8 +1133,8 @@ export default function App() {
              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">1</div>
                <div>
-                 <h3 className="font-bold text-gray-900">会場パッケージ料金</h3>
-                 <p className="text-xs text-gray-400">Venue Package — 必須項目（全て含まれます）</p>
+                 <h3 className="font-bold text-gray-900">{t.venuePackageTitle}</h3>
+                 <p className="text-xs text-gray-400">{t.venuePackageSubtitle}</p>
                </div>
              </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1019,7 +1148,7 @@ export default function App() {
                          <div className="text-[10px] text-gray-400 mt-0.5">¥{item.minPrice.toLocaleString()}–¥{item.maxPrice.toLocaleString()}</div>
                        </div>
                        <div className="flex items-center gap-2 shrink-0">
-                         <span className="text-[9px] bg-amore-100 text-amore-600 font-black px-2 py-0.5 rounded-full uppercase tracking-wide">必須</span>
+                         <span className="text-[9px] bg-amore-100 text-amore-600 font-black px-2 py-0.5 rounded-full uppercase tracking-wide">{t.requiredBadge}</span>
                          <div className="w-8 h-8 rounded-full bg-amore-500 text-white flex items-center justify-center shrink-0">
                            <Check size={14} />
                          </div>
@@ -1061,10 +1190,10 @@ export default function App() {
                })}
              </div>
              <div className="flex justify-between items-center border-t border-amore-100 pt-3">
-               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Section 1 小計</span>
+               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.sec1Subtotal}</span>
                <span className="font-mono font-bold text-amore-700">¥{venueMandatoryTotal.toLocaleString()}</span>
              </div>
-             <p className="text-xs text-gray-400 italic">※ スライダーで会場ごとの参考価格に調整してください。</p>
+             <p className="text-xs text-gray-400 italic">{t.venueSliderNote}</p>
            </div>
 
            {/* ── Section 2: Food & Drink ── */}
@@ -1072,13 +1201,13 @@ export default function App() {
              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">2</div>
                <div>
-                 <h3 className="font-bold text-gray-900">料理・飲み物</h3>
-                 <p className="text-xs text-gray-400">Food & Drink — ゲスト人数に連動</p>
+                 <h3 className="font-bold text-gray-900">{t.foodDrinkTitle}</h3>
+                 <p className="text-xs text-gray-400">{t.foodDrinkSubtitle}</p>
                </div>
              </div>
              {/* Food plan selector */}
              <div className="space-y-4">
-               <p className="text-xs font-black uppercase text-gray-400 tracking-widest">料理プラン</p>
+               <p className="text-xs font-black uppercase text-gray-400 tracking-widest">{t.foodPlanLabel}</p>
                <div className="grid grid-cols-3 gap-3">
                  {(Object.keys(FOOD_PLANS) as FoodPlanType[]).map(plan => (
                    <button key={plan} onClick={() => { setFoodPlan(plan); setFoodPricePerPerson(FOOD_PLANS[plan].minPrice); }}
@@ -1104,10 +1233,10 @@ export default function App() {
              {/* Drinks */}
              <div className="space-y-3">
                <div className="flex items-center justify-between">
-                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">フリードリンク</p>
+                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">{t.drinksLabel}</p>
                  <button onClick={() => setDrinksIncluded(p => !p)}
                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${drinksIncluded ? 'bg-amore-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                   {drinksIncluded ? '含む' : '含まない'}
+                   {drinksIncluded ? t.drinksIncluded : t.drinksNotIncluded}
                  </button>
                </div>
                {drinksIncluded && (
@@ -1128,7 +1257,7 @@ export default function App() {
              {/* Children */}
              <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-4">
                <div>
-                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">お子様</p>
+                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">{t.childLabel}</p>
                  <p className="text-[10px] text-gray-400 mt-0.5">¥{CHILD_PRICE.toLocaleString()} / 人</p>
                </div>
                <div className="flex items-center gap-3">
@@ -1138,7 +1267,7 @@ export default function App() {
                </div>
              </div>
              <div className="flex justify-between items-center border-t border-gray-100 pt-3">
-               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Section 2 小計</span>
+               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.sec2Subtotal}</span>
                <span className="font-mono font-bold text-gray-900">¥{(venueFoodTotal + venueDrinkTotal + venueChildTotal).toLocaleString()}</span>
              </div>
            </div>
@@ -1148,8 +1277,8 @@ export default function App() {
              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                <div className="w-7 h-7 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-black">3</div>
                <div>
-                 <h3 className="font-bold text-gray-900">オプション項目</h3>
-                 <p className="text-xs text-gray-400">Optional Items (品目マスタ) — 必要に応じて追加</p>
+                 <h3 className="font-bold text-gray-900">{t.optionalItemsTitle}</h3>
+                 <p className="text-xs text-gray-400">{t.optionalItemsSubtitle}</p>
                </div>
              </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1203,7 +1332,7 @@ export default function App() {
         <div className={activeTab === 'amore' ? 'block space-y-10 animate-in' : 'hidden'}>
            <header className="text-center max-w-2xl mx-auto">
              <div className="flex items-center justify-center gap-3">
-               <h2 className="text-3xl sm:text-4xl font-serif font-bold">Amore サービス</h2>
+               <h2 className="text-3xl sm:text-4xl font-serif font-bold">{t.amoreServicesTitle}</h2>
                {isAdmin && (
                  <button onClick={() => setShowPriceSettings(true)}
                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-amore-100 text-gray-500 hover:text-amore-600 transition-colors"
@@ -1212,7 +1341,7 @@ export default function App() {
                  </button>
                )}
              </div>
-             <p className="text-gray-500 mt-2 text-sm">Choose how to configure Amore services.</p>
+             <p className="text-gray-500 mt-2 text-sm">{t.amoreConfigDesc}</p>
            </header>
 
            {/* ── Mode selector ── */}
@@ -1225,7 +1354,7 @@ export default function App() {
                  <Award size={28} />
                </div>
                <div>
-                 <div className="font-bold text-lg text-gray-900">スタンダードパッケージ</div>
+                 <div className="font-bold text-lg text-gray-900">{t.standardPackageTitle}</div>
                  <div className="text-3xl font-serif font-bold text-amore-600 mt-1">¥407,000 <span className="text-sm text-gray-400 font-normal">税込</span></div>
                  <div className="text-xs text-gray-400 mt-1">¥{AMORE_STANDARD_PRETAX.toLocaleString()} + 税</div>
                </div>
@@ -1246,7 +1375,7 @@ export default function App() {
                  <ListChecks size={28} />
                </div>
                <div>
-                 <div className="font-bold text-lg text-gray-900">カスタム選択</div>
+                 <div className="font-bold text-lg text-gray-900">{t.customModeTitle}</div>
                  <div className="text-sm text-gray-500 mt-1">個別サービスを選択してカスタマイズ</div>
                  <div className="text-sm text-gray-400">Custom individual services</div>
                </div>
@@ -1261,8 +1390,8 @@ export default function App() {
                  <div className="flex items-center gap-3 pb-5">
                    <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">Q</div>
                    <div>
-                     <h3 className="font-bold text-gray-900">サービス構成を選択</h3>
-                     <p className="text-xs text-gray-400">Answer to auto-configure prices below</p>
+                     <h3 className="font-bold text-gray-900">{t.serviceConfigTitle}</h3>
+                     <p className="text-xs text-gray-400">{t.autoConfigDesc}</p>
                    </div>
                  </div>
 
@@ -1418,9 +1547,9 @@ export default function App() {
 
                {/* Auto-configured service cards */}
                <div className="space-y-4">
-                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">選択内容に基づく自動設定価格 — Fine-tune if needed</h3>
+                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">{t.autoPriceTitle}</h3>
                  {amoreServices.filter(s => s.isSelected).length === 0 && (
-                   <p className="text-sm text-gray-400 italic">サービスが選択されていません。合計は ¥0 です。</p>
+                   <p className="text-sm text-gray-400 italic">{t.noServicesMsg}</p>
                  )}
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                    {amoreServices.filter(s => s.isSelected).map(service => {
@@ -1435,7 +1564,7 @@ export default function App() {
                          <div className="flex justify-between items-start">
                            <h4 className="font-serif text-sm font-bold text-gray-900 leading-tight flex-1 pr-2">{localizedName}</h4>
                            <button onClick={() => toggleAmoreService(service.id)}
-                             title="このサービスを除外"
+                             title={t.excludeServiceTitle}
                              className="w-6 h-6 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-400 flex items-center justify-center transition-all shrink-0">
                              <X size={11} />
                            </button>
@@ -1463,7 +1592,7 @@ export default function App() {
                            </div>
                          </div>
                          <div className="flex justify-between items-center border-t border-gray-100 pt-2">
-                           <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">小計</span>
+                           <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">{t.sectionSubtotal}</span>
                            <span className="font-mono font-bold text-sm text-amore-700">¥{(effectivePrice * qty).toLocaleString()}</span>
                          </div>
                        </div>
@@ -1473,7 +1602,7 @@ export default function App() {
                  {/* Excluded services — click to re-add */}
                  {amoreServices.some(s => !s.isSelected) && (
                    <div className="flex items-start gap-2 flex-wrap pt-3 border-t border-gray-100">
-                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide shrink-0 mt-0.5">除外 — タップで追加:</span>
+                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide shrink-0 mt-0.5">{t.excludedLabel}</span>
                      {amoreServices.filter(s => !s.isSelected).map(s => (
                        <button key={s.id} onClick={() => toggleAmoreService(s.id)}
                          className="text-[10px] bg-gray-100 text-gray-400 hover:bg-amore-50 hover:text-amore-600 rounded-full px-2.5 py-0.5 line-through hover:no-underline transition-all">
@@ -1556,7 +1685,7 @@ export default function App() {
                     {venueInfo.name && <p className="text-amore-600 font-serif text-lg italic mt-2">Venue: {venueInfo.name}</p>}
                     {weddingDate && (
                       <div className="text-sm text-gray-500">
-                        挙式予定日: {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+                        {t.weddingDateLabel}: {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
                         <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded-full ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].bg} ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].color}`}>
                           {ROKUYO_DATA[getRokuyoIndex(weddingDate)].ja}
                         </span>
@@ -1618,7 +1747,7 @@ export default function App() {
                      {childCount > 0 && (
                        <div className="flex justify-between items-baseline">
                          <div className="flex flex-col">
-                           <span className="font-serif text-lg sm:text-xl text-gray-800">お子様料金</span>
+                           <span className="font-serif text-lg sm:text-xl text-gray-800">{t.childFeeLabel}</span>
                            <span className="text-[10px] text-gray-400 font-mono mt-1">¥{CHILD_PRICE.toLocaleString()} × {childCount}名</span>
                          </div>
                          <span className="font-mono font-bold text-base sm:text-lg">¥{venueChildTotal.toLocaleString()}</span>
@@ -1639,12 +1768,12 @@ export default function App() {
                        );
                      })}
                      <div className="flex justify-between items-center border-t border-gray-100 pt-4">
-                       <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">会場小計</span>
+                       <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.venueSubtotalLabel}</span>
                        <span className="font-mono font-bold text-base sm:text-lg text-gray-700">¥{venueSubtotal.toLocaleString()}</span>
                      </div>
                      {demandSurcharge > 0 && (
                        <div className="flex justify-between items-baseline">
-                         <span className="font-serif text-lg sm:text-xl text-red-700">繁忙期加算 {dateDemand?.labelJa}</span>
+                         <span className="font-serif text-lg sm:text-xl text-red-700">{t.demandSurcharge} {dateDemand ? getDemandLabel(dateDemand) : ''}</span>
                          <span className="font-mono font-bold text-base sm:text-lg text-red-700">+¥{demandSurcharge.toLocaleString()}</span>
                        </div>
                      )}
@@ -1656,7 +1785,7 @@ export default function App() {
                    <div className="break-inside-avoid group">
                      <div className="flex items-center gap-4 mb-6">
                        <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
-                       <h3 className="text-[10px] font-black text-gray-300 group-hover:text-amore-400 uppercase tracking-[0.3em] transition-colors">Amoreサービス</h3>
+                       <h3 className="text-[10px] font-black text-gray-300 group-hover:text-amore-400 uppercase tracking-[0.3em] transition-colors">{t.amoreServicesLabel}</h3>
                        <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
                      </div>
                      <div className="space-y-5">
@@ -1664,7 +1793,7 @@ export default function App() {
                          <div className="space-y-4">
                            <div className="flex justify-between items-baseline text-amore-700 bg-amore-50/30 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 rounded-3xl border border-amore-50">
                              <div className="flex flex-col">
-                               <span className="font-serif text-lg sm:text-xl font-bold">スタンダードパッケージ</span>
+                               <span className="font-serif text-lg sm:text-xl font-bold">{t.standardPackageTitle}</span>
                                <span className="text-[10px] text-amore-400 font-mono mt-1">税込 ¥407,000</span>
                              </div>
                              <span className="font-mono font-bold text-lg sm:text-xl">¥{AMORE_STANDARD_PRETAX.toLocaleString()}</span>
@@ -1700,7 +1829,7 @@ export default function App() {
                          </>
                        )}
                        <div className="flex justify-between items-center border-t border-gray-100 pt-4">
-                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Amore小計</span>
+                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.amoreSubtotalLabel}</span>
                          <span className="font-mono font-bold text-base sm:text-lg text-amore-700">¥{amoreSubtotal.toLocaleString()}</span>
                        </div>
                      </div>
