@@ -1511,18 +1511,15 @@ export default function App() {
                  <div className="space-y-2">
                     <h1 className="text-4xl sm:text-5xl font-serif font-bold text-gray-900">{t.title}</h1>
                     <p className="text-gray-400 tracking-widest uppercase text-[10px] font-black">{t.guestCount}: {venueInfo.guestCount} Guests • {t.date}: {todayDate}</p>
+                    {venueInfo.name && <p className="text-amore-600 font-serif text-lg italic mt-2">Venue: {venueInfo.name}</p>}
                     {weddingDate && (
-                      <p className="text-sm text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
-                        <span>挙式予定日: {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</span>
-                        <span className={`text-xs font-black px-2 py-0.5 rounded-full ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].bg} ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].color} border ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].border}`}>
+                      <div className="text-sm text-gray-500">
+                        挙式予定日: {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+                        <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded-full ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].bg} ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].color}`}>
                           {ROKUYO_DATA[getRokuyoIndex(weddingDate)].ja}
                         </span>
-                        {dateDemand && dateDemand.surcharge > 0 && (
-                          <span className="text-xs text-red-500 font-bold">⚠️ {dateDemand.labelJa}</span>
-                        )}
-                      </p>
+                      </div>
                     )}
-                    {venueInfo.name && <p className="text-amore-600 font-serif text-lg italic mt-2">Venue: {venueInfo.name}</p>}
                  </div>
 
                  {/* Simulation banner */}
@@ -1605,7 +1602,7 @@ export default function App() {
                      </div>
                      {demandSurcharge > 0 && (
                        <div className="flex justify-between items-baseline">
-                         <span className="font-serif text-lg sm:text-xl text-red-700">繁忙期加算 ({dateDemand?.labelJa})</span>
+                         <span className="font-serif text-lg sm:text-xl text-red-700">繁忙期加算 {dateDemand?.labelJa}</span>
                          <span className="font-mono font-bold text-base sm:text-lg text-red-700">+¥{demandSurcharge.toLocaleString()}</span>
                        </div>
                      )}
