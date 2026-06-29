@@ -4,7 +4,7 @@ import { QuoteItem, AmoreService, VenueInfo, MochikomiItem, QuoteCategory, Venue
 import { fetchMinimumFee } from './services/geminiService';
 import { MENU_CATALOG, CatalogItem, VENUE_LIST } from './services/simulatorData';
 import { ServiceCard } from './components/ServiceCard';
-import { Heart, Loader2, Sparkles, X, Info, Plus, Minus, Download, PieChart as PieChartIcon, ChevronRight, Settings, FileText, LayoutGrid, Users, Landmark, BookOpen, CheckCircle2, Wallet, TrendingUp, TrendingDown, ArrowRight, Image as ImageIcon, HelpCircle, Award, Star, Check, MousePointer2, ListChecks, MessageCircle, MapPin, Search, Clock } from 'lucide-react';
+import { Heart, Calendar, Loader2, Sparkles, X, Info, Plus, Minus, Download, PieChart as PieChartIcon, ChevronRight, Settings, FileText, LayoutGrid, Users, Landmark, BookOpen, CheckCircle2, Wallet, TrendingUp, TrendingDown, ArrowRight, Image as ImageIcon, HelpCircle, Award, Star, Check, MousePointer2, ListChecks, MessageCircle, MapPin, Search, Clock } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 // --- 品目マスタ reference prices from spreadsheet ---
@@ -86,7 +86,7 @@ const AMORE_ADDON_CONFIG = {
 };
 
 // --- TYPES ---
-type TabType = 'setup' | 'catalog' | 'amore' | 'preview';
+type TabType = 'date' | 'setup' | 'catalog' | 'amore' | 'preview';
 type Language = 'en' | 'ja' | 'my';
 
 // --- TRANSLATIONS ---
@@ -380,8 +380,67 @@ const INITIAL_SERVICES: (Omit<AmoreService, 'name'> & { name: Record<string, str
   },
 ];
 
+// --- CALENDAR UTILITIES ---
+const ROKUYO_DATA = [
+  { ja: '先勝', en: 'Sensho',     color: 'text-blue-500',  bg: 'bg-blue-50',   border: 'border-blue-200',   tier: 'mild' },
+  { ja: '友引', en: 'Tomobiki',   color: 'text-green-600', bg: 'bg-green-50',  border: 'border-green-200',  tier: 'good' },
+  { ja: '先負', en: 'Senbu',      color: 'text-indigo-400',bg: 'bg-indigo-50', border: 'border-indigo-200', tier: 'mild' },
+  { ja: '仏滅', en: 'Butsumetsu', color: 'text-gray-400',  bg: 'bg-gray-50',   border: 'border-gray-200',   tier: 'bad'  },
+  { ja: '大安', en: 'Taian',      color: 'text-rose-600',  bg: 'bg-rose-50',   border: 'border-rose-200',   tier: 'best' },
+  { ja: '赤口', en: 'Shakko',     color: 'text-red-500',   bg: 'bg-red-50',    border: 'border-red-200',    tier: 'bad'  },
+];
+
+const CHINESE_NEW_YEARS: [number, number, number][] = [
+  [2023, 1, 22], [2024, 2, 10], [2025, 1, 29], [2026, 2, 17], [2027, 2, 6], [2028, 1, 26],
+];
+
+function getRokuyoIndex(date: Date): number {
+  const ts = date.getTime();
+  let refTs = -Infinity;
+  for (const [y, m, d] of CHINESE_NEW_YEARS) {
+    const cny = new Date(y, m - 1, d).getTime();
+    if (cny <= ts && cny > refTs) refTs = cny;
+  }
+  if (refTs === -Infinity) return 0;
+  const daysSince = Math.floor((ts - refTs) / 86400000);
+  const lunarMonth = Math.floor(daysSince / 29.53059) + 1;
+  const lunarDay   = Math.floor(daysSince % 29.53059) + 1;
+  return ((lunarMonth + lunarDay - 2) % 6 + 6) % 6;
+}
+
+function getMyanmarDayInfo(date: Date): { label: string; tier: 'good' | 'neutral' | 'avoid' } {
+  const dow = date.getDay();
+  if (dow === 4) return { label: 'ကြာသ ✓', tier: 'good' };
+  const ts = date.getTime();
+  let refTs = -Infinity;
+  for (const [y, m, d] of CHINESE_NEW_YEARS) {
+    const cny = new Date(y, m - 1, d).getTime();
+    if (cny <= ts && cny > refTs) refTs = cny;
+  }
+  const lunarDay = refTs === -Infinity ? 1 : (Math.floor((ts - refTs) / 86400000) % 30) + 1;
+  if (lunarDay === 15) return { label: 'လပြည့် ✓', tier: 'good' };
+  if ([9, 18, 27].includes(lunarDay)) return { label: 'ရက်ကြမ်း', tier: 'avoid' };
+  return { label: '', tier: 'neutral' };
+}
+
+type DemandLevel = 'peak' | 'high' | 'normal' | 'low';
+function getDateDemand(date: Date): { level: DemandLevel; labelJa: string; surcharge: number } {
+  const dow = date.getDay();
+  const isWeekend = dow === 0 || dow === 6;
+  const rokuyo = getRokuyoIndex(date);
+  if (rokuyo === 4 && isWeekend) return { level: 'peak',   labelJa: '大安×週末 ― 繁忙期',  surcharge: 50000 };
+  if (rokuyo === 4)              return { level: 'high',   labelJa: '大安 ― 人気',          surcharge: 20000 };
+  if (isWeekend && rokuyo === 1) return { level: 'high',   labelJa: '友引×週末',             surcharge: 20000 };
+  if (isWeekend)                 return { level: 'high',   labelJa: '週末',                  surcharge: 10000 };
+  if (rokuyo === 3 && !isWeekend)return { level: 'low',    labelJa: '仏滅 ― 割引交渉可',     surcharge: 0     };
+  return                                { level: 'normal', labelJa: '平日',                  surcharge: 0     };
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('setup');
+  const [activeTab, setActiveTab] = useState<TabType>('date');
+  const [weddingDate, setWeddingDate] = useState<Date | null>(null);
+  const [calYear,  setCalYear]  = useState(new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [language, setLanguage] = useState<Language>('en');
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
 
@@ -446,16 +505,16 @@ export default function App() {
         // Makeup: questionnaire (makeupLooks) controls isSelected + price range
         case 'makeup': {
           if (amoreAddons.makeupLooks === 0) return { ...s, isSelected: false };
-          const ranges: Record<string, [number, number]> = {
-            '1':  [25000,  55000],
-            '1R': [50000,  85000],
-            '2':  [45000,  90000],
-            '2R': [55000, 110000],
+          const configs: Record<string, [number, number, number]> = {
+            '1':  [25000,  55000, 25000],
+            '1R': [35000,  85000, 50000],
+            '2':  [45000,  90000, 45000],
+            '2R': [55000, 110000, 55000],
           };
           const key = `${amoreAddons.makeupLooks}${amoreAddons.makeupRehearsal ? 'R' : ''}`;
-          const [newMin, newMax] = ranges[key];
+          const [newMin, newMax, newDef] = configs[key];
           const rangeChanged = s.minPrice !== newMin || s.maxPrice !== newMax;
-          const newPrice = rangeChanged ? newMin : Math.min(Math.max(s.currentPrice, newMin), newMax);
+          const newPrice = rangeChanged ? newDef : Math.min(Math.max(s.currentPrice, newMin), newMax);
           return { ...s, isSelected: s.isSelected, minPrice: newMin, maxPrice: newMax, currentPrice: newPrice };
         }
         // Optional services: toggled by questionnaire answers
@@ -666,7 +725,9 @@ export default function App() {
     if (amoreAddons.aisleFlower) amoreSubtotal += addonPrices.aisleFlower;
   }
   
-  const subtotalBeforeTax = venueSubtotal + amoreSubtotal;
+  const dateDemand = weddingDate ? getDateDemand(weddingDate) : null;
+  const demandSurcharge = dateDemand ? dateDemand.surcharge : 0;
+  const subtotalBeforeTax = venueSubtotal + amoreSubtotal + demandSurcharge;
   const taxAmount = Math.floor(subtotalBeforeTax * venueInfo.taxRate);
   const grandTotal = subtotalBeforeTax + taxAmount;
   
@@ -677,10 +738,11 @@ export default function App() {
   const selectedAmoreServices = amoreServices.filter(s => s.isSelected);
 
   const steps = [
-    { id: 'setup', label: t.step1, icon: <Wallet size={16}/> },
+    { id: 'date',    label: '日程',   icon: <Calendar size={16}/> },
+    { id: 'setup',   label: t.step1, icon: <Wallet size={16}/> },
     { id: 'catalog', label: t.step2, icon: <BookOpen size={16}/> },
-    { id: 'amore', label: t.step3, icon: <LayoutGrid size={16}/> },
-    { id: 'preview', label: t.step4, icon: <FileText size={16}/> }
+    { id: 'amore',   label: t.step3, icon: <LayoutGrid size={16}/> },
+    { id: 'preview', label: t.step4, icon: <FileText size={16}/> },
   ];
 
   return (
@@ -722,6 +784,136 @@ export default function App() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+        {/* ── Date Selection Tab ── */}
+        <div className={activeTab === 'date' ? 'block animate-in fade-in' : 'hidden'}>
+          <div className="max-w-3xl mx-auto space-y-8">
+            <header className="text-center space-y-2">
+              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">挙式日程を選択</h2>
+              <p className="text-gray-400 text-sm">Select your wedding date — auspicious days and demand are shown below</p>
+            </header>
+
+            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 space-y-5">
+              {/* Month navigation */}
+              <div className="flex items-center justify-between">
+                <button onClick={() => { const d = new Date(calYear, calMonth - 1, 1); setCalYear(d.getFullYear()); setCalMonth(d.getMonth()); }}
+                  className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xl font-bold transition-all">‹</button>
+                <div className="text-center">
+                  <div className="font-serif font-bold text-xl text-gray-900">
+                    {new Date(calYear, calMonth).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">
+                    {new Date(calYear, calMonth).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                  </div>
+                </div>
+                <button onClick={() => { const d = new Date(calYear, calMonth + 1, 1); setCalYear(d.getFullYear()); setCalMonth(d.getMonth()); }}
+                  className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xl font-bold transition-all">›</button>
+              </div>
+
+              {/* Day-of-week headers */}
+              <div className="grid grid-cols-7 gap-1">
+                {['日','月','火','水','木','金','土'].map((d, i) => (
+                  <div key={d} className={`text-center text-[10px] font-black uppercase tracking-wide pb-1 ${i===0?'text-red-400':i===6?'text-blue-400':'text-gray-400'}`}>{d}</div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {(() => {
+                  const firstDay = new Date(calYear, calMonth, 1).getDay();
+                  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+                  const cells = [];
+                  for (let i = 0; i < firstDay; i++) cells.push(<div key={`e${i}`} />);
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(calYear, calMonth, day);
+                    const dow = date.getDay();
+                    const isWeekend = dow === 0 || dow === 6;
+                    const rIdx = getRokuyoIndex(date);
+                    const rokuyo = ROKUYO_DATA[rIdx];
+                    const demand = getDateDemand(date);
+                    const myanmar = getMyanmarDayInfo(date);
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const isSelected = weddingDate?.getFullYear()===calYear && weddingDate?.getMonth()===calMonth && weddingDate?.getDate()===day;
+                    const isToday = date.getTime() === today.getTime();
+                    const isPast = date < today;
+                    cells.push(
+                      <button key={day} disabled={isPast} onClick={() => setWeddingDate(date)}
+                        className={`relative rounded-xl p-1 text-left transition-all min-h-[68px] flex flex-col gap-0.5 border text-[10px]
+                          ${isPast ? 'opacity-25 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.04] hover:shadow-md'}
+                          ${isSelected ? 'bg-amore-500 border-amore-600 text-white shadow-lg scale-[1.06]'
+                            : `${rokuyo.bg} ${rokuyo.border}`}`}>
+                        <span className={`font-black text-sm leading-none pl-0.5 ${isSelected?'text-white':isWeekend?(dow===0?'text-red-500':'text-blue-500'):'text-gray-800'}`}>
+                          {day}{isToday&&<span className="ml-0.5 text-[7px]">今</span>}
+                        </span>
+                        <span className={`font-bold leading-none pl-0.5 ${isSelected?'text-white/90':rokuyo.color}`}>{rokuyo.ja}</span>
+                        {myanmar.label && (
+                          <span className={`leading-none pl-0.5 ${isSelected?'text-white/80':myanmar.tier==='good'?'text-teal-500':myanmar.tier==='avoid'?'text-orange-400':'text-gray-400'}`}>{myanmar.label}</span>
+                        )}
+                        {!isSelected && demand.level==='peak'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-red-500 text-white rounded px-0.5 font-black leading-tight">繁忙</span>}
+                        {!isSelected && demand.level==='high'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-orange-400 text-white rounded px-0.5 font-black leading-tight">人気</span>}
+                        {!isSelected && demand.level==='low'   && <span className="absolute top-0.5 right-0.5 text-[7px] bg-gray-300 text-gray-600 rounded px-0.5 leading-tight">割</span>}
+                      </button>
+                    );
+                  }
+                  return cells;
+                })()}
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-3 border-t border-gray-50 text-[10px] text-gray-500">
+                <span><span className="inline-block w-2 h-2 rounded-full bg-rose-400 mr-1"/>大安 — 最良</span>
+                <span><span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1"/>友引 — 吉</span>
+                <span><span className="inline-block w-2 h-2 rounded-full bg-gray-300 mr-1"/>仏滅/赤口 — 凶</span>
+                <span className="text-red-500 font-bold">繁忙 = 繁忙期加算あり</span>
+                <span className="text-teal-500">ကြာသ = ミャンマー吉日（木曜）</span>
+                <span className="text-orange-400">ရက်ကြမ်း = ミャンマー避ける日</span>
+              </div>
+            </div>
+
+            {/* Selected date card */}
+            {weddingDate && (() => {
+              const demand = getDateDemand(weddingDate);
+              const rokuyo = ROKUYO_DATA[getRokuyoIndex(weddingDate)];
+              const myanmar = getMyanmarDayInfo(weddingDate);
+              return (
+                <div className={`rounded-[2rem] border-2 p-6 space-y-3 ${demand.level==='peak'?'bg-red-50 border-red-200':demand.level==='high'?'bg-orange-50 border-orange-200':demand.level==='low'?'bg-gray-50 border-gray-200':'bg-white border-gray-100'}`}>
+                  <div className="flex items-start justify-between flex-wrap gap-3">
+                    <div>
+                      <div className="font-serif font-bold text-xl text-gray-900">
+                        {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {weddingDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <span className={`text-sm font-black px-3 py-1 rounded-full border ${rokuyo.bg} ${rokuyo.color} ${rokuyo.border}`}>{rokuyo.ja}</span>
+                      {myanmar.label && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${myanmar.tier==='good'?'bg-teal-50 text-teal-600 border-teal-200':myanmar.tier==='avoid'?'bg-orange-50 text-orange-600 border-orange-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{myanmar.label}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-white/60">
+                    <span className={`text-sm font-bold ${demand.level==='peak'?'text-red-600':demand.level==='high'?'text-orange-600':demand.level==='low'?'text-gray-500':'text-gray-600'}`}>
+                      {demand.level==='peak'?'⚠️ ':demand.level==='high'?'📈 ':demand.level==='low'?'💡 ':''}{demand.labelJa}
+                    </span>
+                    {demand.surcharge > 0
+                      ? <span className="font-mono font-bold text-red-600">+¥{demand.surcharge.toLocaleString()} 繁忙期加算</span>
+                      : demand.level==='low'
+                        ? <span className="text-xs text-gray-400">割引交渉をご相談ください</span>
+                        : <span className="text-xs text-gray-400">通常料金</span>}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex justify-center pt-2">
+              <button onClick={() => setActiveTab('setup')}
+                className="bg-gray-900 text-white px-10 py-4 rounded-2xl font-bold flex items-center gap-2 hover:bg-black transition-all shadow-lg group">
+                {weddingDate ? '次へ: 基本設定' : '日程をスキップして次へ'} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className={activeTab === 'setup' ? 'block animate-in fade-in' : 'hidden'}>
            <section className="bg-white rounded-[2rem] p-6 md:p-10 lg:p-14 shadow-xl border border-gray-100 space-y-12">
               <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl">
@@ -1319,6 +1511,17 @@ export default function App() {
                  <div className="space-y-2">
                     <h1 className="text-4xl sm:text-5xl font-serif font-bold text-gray-900">{t.title}</h1>
                     <p className="text-gray-400 tracking-widest uppercase text-[10px] font-black">{t.guestCount}: {venueInfo.guestCount} Guests • {t.date}: {todayDate}</p>
+                    {weddingDate && (
+                      <p className="text-sm text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
+                        <span>挙式予定日: {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</span>
+                        <span className={`text-xs font-black px-2 py-0.5 rounded-full ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].bg} ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].color} border ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].border}`}>
+                          {ROKUYO_DATA[getRokuyoIndex(weddingDate)].ja}
+                        </span>
+                        {dateDemand && dateDemand.surcharge > 0 && (
+                          <span className="text-xs text-red-500 font-bold">⚠️ {dateDemand.labelJa}</span>
+                        )}
+                      </p>
+                    )}
                     {venueInfo.name && <p className="text-amore-600 font-serif text-lg italic mt-2">Venue: {venueInfo.name}</p>}
                  </div>
 
@@ -1400,6 +1603,12 @@ export default function App() {
                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">会場小計</span>
                        <span className="font-mono font-bold text-base sm:text-lg text-gray-700">¥{venueSubtotal.toLocaleString()}</span>
                      </div>
+                     {demandSurcharge > 0 && (
+                       <div className="flex justify-between items-baseline">
+                         <span className="font-serif text-lg sm:text-xl text-red-700">繁忙期加算 ({dateDemand?.labelJa})</span>
+                         <span className="font-mono font-bold text-base sm:text-lg text-red-700">+¥{demandSurcharge.toLocaleString()}</span>
+                       </div>
+                     )}
                    </div>
                  </div>
 
