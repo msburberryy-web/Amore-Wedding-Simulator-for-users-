@@ -448,14 +448,15 @@ export default function App() {
           if (amoreAddons.makeupLooks === 0) return { ...s, isSelected: false };
           const ranges: Record<string, [number, number]> = {
             '1':  [25000,  55000],
-            '1R': [35000,  85000],
+            '1R': [50000,  85000],
             '2':  [45000,  90000],
             '2R': [55000, 110000],
           };
           const key = `${amoreAddons.makeupLooks}${amoreAddons.makeupRehearsal ? 'R' : ''}`;
           const [newMin, newMax] = ranges[key];
-          return { ...s, isSelected: s.isSelected, minPrice: newMin, maxPrice: newMax,
-                   currentPrice: Math.min(Math.max(s.currentPrice, newMin), newMax) };
+          const rangeChanged = s.minPrice !== newMin || s.maxPrice !== newMax;
+          const newPrice = rangeChanged ? newMin : Math.min(Math.max(s.currentPrice, newMin), newMax);
+          return { ...s, isSelected: s.isSelected, minPrice: newMin, maxPrice: newMax, currentPrice: newPrice };
         }
         // Optional services: toggled by questionnaire answers
         case 'amore_bouquet':
