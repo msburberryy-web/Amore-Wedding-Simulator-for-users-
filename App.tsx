@@ -4,7 +4,7 @@ import { QuoteItem, AmoreService, VenueInfo, MochikomiItem, QuoteCategory, Venue
 import { fetchMinimumFee } from './services/geminiService';
 import { MENU_CATALOG, CatalogItem, VENUE_LIST } from './services/simulatorData';
 import { ServiceCard } from './components/ServiceCard';
-import { Heart, Loader2, Sparkles, X, Info, Plus, Minus, Download, PieChart as PieChartIcon, ChevronRight, Settings, FileText, LayoutGrid, Users, Landmark, BookOpen, CheckCircle2, Wallet, TrendingUp, TrendingDown, ArrowRight, Image as ImageIcon, HelpCircle, Award, Star, Check, MousePointer2, ListChecks, MessageCircle, MapPin, Search, Clock } from 'lucide-react';
+import { Heart, Calendar, Loader2, Sparkles, X, Info, Plus, Minus, Download, PieChart as PieChartIcon, ChevronRight, Settings, FileText, LayoutGrid, Users, Landmark, BookOpen, CheckCircle2, Wallet, TrendingUp, TrendingDown, ArrowRight, Image as ImageIcon, HelpCircle, Award, Star, Check, MousePointer2, ListChecks, MessageCircle, MapPin, Search, Clock } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 // --- 品目マスタ reference prices from spreadsheet ---
@@ -44,17 +44,27 @@ const AMORE_TEMPLATE_NAMES: Record<string, string> = {
 // --- VENUE & AMORE CONFIG ---
 type FoodPlanType = 'course' | 'tableshare' | 'buffet';
 const FOOD_PLANS: Record<FoodPlanType, { ja: string; en: string; minPrice: number; maxPrice: number; defaultPrice: number }> = {
-  course:     { ja: 'コース料理',   en: 'Course Menu',  minPrice: 11000, maxPrice: 19000, defaultPrice: 13000 },
-  tableshare: { ja: 'テーブルシェア', en: 'Table Share',  minPrice: 9000,  maxPrice: 15000, defaultPrice: 11000 },
-  buffet:     { ja: 'ビュッフェ',   en: 'Buffet',       minPrice: 7000,  maxPrice: 12000, defaultPrice: 9000  },
+  course:     { ja: 'コース料理',   en: 'Course Menu',  minPrice: 11000, maxPrice: 30000, defaultPrice: 11000 },
+  tableshare: { ja: 'テーブルシェア', en: 'Table Share',  minPrice:  9000, maxPrice: 25000, defaultPrice:  9000 },
+  buffet:     { ja: 'ビュッフェ',   en: 'Buffet',       minPrice:  7000, maxPrice: 20000, defaultPrice:  7000 },
 };
+// Mandatory venue items — always included, user adjusts price only
+const VENUE_MANDATORY_ITEMS = [
+  { id: 'mand_venue',  ja: '会場使用料',                  en: 'Venue Rental Fee',          minPrice:  50000, maxPrice: 200000, defaultPrice: 100000, unit: '式' },
+  { id: 'mand_bridal', ja: 'ブライズ利用料',              en: 'Bridal Room Usage',         minPrice:  20000, maxPrice:  50000, defaultPrice:  30000, unit: '式' },
+  { id: 'mand_sound',  ja: '音響・照明（オペレーター込み）', en: 'Sound & Lighting (w/ Op.)', minPrice:  50000, maxPrice: 120000, defaultPrice:  60000, unit: '式' },
+  { id: 'mand_staff',  ja: 'スタッフなど',                en: 'Staff Services',            minPrice:  20000, maxPrice:  80000, defaultPrice:  30000, unit: '式' },
+];
 const VENUE_OPTIONAL_ITEMS = [
-  { id: 'opt_bridal',   ja: 'ブライズ利用料',          en: 'Bridal Room Usage',          minPrice: 30000, maxPrice:  50000, defaultPrice: 35000, isPerGuest: false, unit: '式' },
-  { id: 'opt_attend',   ja: '介添え',                  en: 'Wedding Attendant',          minPrice: 20000, maxPrice:  40000, defaultPrice: 25000, isPerGuest: false, unit: '式' },
-  { id: 'opt_sound',    ja: '音響・照明（オペレーター込み）', en: 'Sound & Lighting (w/ Op.)', minPrice: 50000, maxPrice: 120000, defaultPrice: 60000, isPerGuest: false, unit: '式' },
-  { id: 'opt_staff',    ja: 'スタッフなど',             en: 'Staff Services',             minPrice: 30000, maxPrice:  80000, defaultPrice: 40000, isPerGuest: false, unit: '式' },
-  { id: 'opt_favor',    ja: '引出物（スタンダード）',   en: 'Wedding Favors',             minPrice:  2000, maxPrice:   5000, defaultPrice:  3000, isPerGuest: true,  unit: '個' },
-  { id: 'opt_gift',     ja: 'プチギフト',               en: 'Mini Gift',                  minPrice:   500, maxPrice:   1000, defaultPrice:   700, isPerGuest: true,  unit: '人' },
+  { id: 'opt_attend',    ja: '介添え',              en: 'Wedding Attendant',     minPrice: 20000, maxPrice:  40000, defaultPrice: 25000, isPerGuest: false, unit: '式' },
+  { id: 'opt_favor',    ja: '引出物（スタンダード）', en: 'Wedding Favors',        minPrice:  2000, maxPrice:   5000, defaultPrice:  3000, isPerGuest: true,  unit: '個' },
+  { id: 'opt_gift',     ja: 'プチギフト',            en: 'Mini Gift',             minPrice:   500, maxPrice:   1000, defaultPrice:   700, isPerGuest: true,  unit: '人' },
+  { id: 'opt_champagne',ja: 'シャンパンタワー',       en: 'Champagne Tower',       minPrice: 30000, maxPrice:  80000, defaultPrice: 50000, isPerGuest: false, unit: '式' },
+  { id: 'opt_cake',     ja: 'ウェディングケーキ',     en: 'Wedding Cake',          minPrice: 30000, maxPrice:  80000, defaultPrice: 50000, isPerGuest: false, unit: '式' },
+  { id: 'opt_lobby',    ja: 'ロビー演出',            en: 'Lobby Decoration',      minPrice: 20000, maxPrice:  50000, defaultPrice: 30000, isPerGuest: false, unit: '式' },
+  { id: 'opt_extend',   ja: '延長料金',              en: 'Time Extension Fee',    minPrice: 20000, maxPrice:  50000, defaultPrice: 30000, isPerGuest: false, unit: '時間' },
+  { id: 'opt_carpet',   ja: 'レッドカーペット',       en: 'Red Carpet',            minPrice: 10000, maxPrice:  30000, defaultPrice: 15000, isPerGuest: false, unit: '式' },
+  { id: 'opt_preptime', ja: '準備時間の追加',         en: 'Additional Prep Time',  minPrice: 10000, maxPrice:  30000, defaultPrice: 15000, isPerGuest: false, unit: '時間' },
 ];
 const AMORE_STANDARD_PRETAX = 370000;
 const AMORE_STANDARD_INCLUDES = [
@@ -76,24 +86,24 @@ const AMORE_ADDON_CONFIG = {
 };
 
 // --- TYPES ---
-type TabType = 'setup' | 'catalog' | 'amore' | 'preview';
+type TabType = 'date' | 'setup' | 'catalog' | 'amore' | 'preview';
 type Language = 'en' | 'ja' | 'my';
 
 // --- TRANSLATIONS ---
 const TRANSLATIONS = {
   en: {
-    title: "Wedding Service Estimate",
-    subtitle: "Prepared exclusively for your special day",
-    appIntro: "This app is to estimate your wedding budget based on what services you need. The actual cost will depends on the venue of your choice and your plan.",
+    title: "Wedding Budget Simulation",
+    subtitle: "Initial cost simulation · For planning purposes only",
+    appIntro: "Use this simulator to explore how different venue and service choices affect your total budget. All figures shown are reference ranges — your Amore planner will confirm actual costs once venue and services are finalised.",
     guestCount: "Guest Count",
     date: "Date",
-    totalEstimate: "Total Estimate",
+    totalEstimate: "Simulated Total",
     subtotalVenue: "Venue Subtotal",
     subtotalAmore: "Amore Services",
     subtotal: "Subtotal",
     tax: "Consumption Tax (10%)",
-    totalRange: "Total Est. Range",
-    disclaimer: "This document is an estimate only. Prices are subject to availability and final confirmation by the venue.",
+    totalRange: "Simulated Range",
+    disclaimer: "This is a budget simulation for internal planning use — not a final quotation or binding price. Figures are reference estimates only. Final costs will be confirmed by your Amore planner.",
     budgetFriendlyNote: "Budget friendly option? Please freely discuss with us. We are happy to tailor the plan to your needs.",
     menuBook: "Venue Selection",
     menuBookDesc: "How would you like to calculate venue costs?",
@@ -118,9 +128,9 @@ const TRANSLATIONS = {
     included: "Included in Estimate",
     notIncluded: "Not Selected",
     nextStepAmore: "Next: Amore Services",
-    generateSummary: "Generate Final Summary",
-    viewDocument: "View Document",
-    estimateTotal: "Estimate Total (Inc. Tax)",
+    generateSummary: "View Simulation Summary",
+    viewDocument: "View Simulation",
+    estimateTotal: "Simulated Total (Inc. Tax)",
     quantity: "Quantity",
     table: "Table",
     perPerson: "per person",
@@ -132,6 +142,62 @@ const TRANSLATIONS = {
     serviceDetails: "Service Details",
     generatedOn: "Generated on",
     amoreTokyo: "Amore Wedding Tokyo",
+    // Date step
+    dateStepTitle: "Select Wedding Date",
+    dateStepSubtitle: "Select your wedding date — auspicious days and demand are shown below",
+    skipDate: "Skip — Continue without date",
+    nextToSetup: "Next: Basic Setup",
+    legendBest: "Taian — Best",
+    legendGood: "Tomobiki — Good",
+    legendBad: "Butsumetsu / Shakko — Avoid",
+    legendPeak: "Peak = surcharge applies",
+    legendMyanmarGood: "Myanmar auspicious (Thu)",
+    legendMyanmarAvoid: "Myanmar avoid",
+    demandSurcharge: "Peak period surcharge",
+    discountConsult: "Discount negotiable — ask planner",
+    normalPrice: "Standard pricing",
+    weddingDateLabel: "Wedding date",
+    // Venue
+    venuePackageTitle: "Venue Package Fees",
+    venuePackageSubtitle: "Mandatory items — all included",
+    requiredBadge: "Required",
+    sec1Subtotal: "Section 1 Subtotal",
+    foodPlanLabel: "Food Plan",
+    drinksLabel: "Free Drinks",
+    sec2Subtotal: "Section 2 Subtotal",
+    optionalItemsTitle: "Optional Items",
+    sec3Subtotal: "Section 3 Subtotal",
+    venueSubtotalLabel: "Venue Subtotal",
+    childFeeLabel: "Child Fee",
+    // Amore
+    standardPackageTitle: "Standard Package",
+    customModeTitle: "Custom Selection",
+    amoreConfigDesc: "Choose how to configure Amore services.",
+    serviceConfigTitle: "Service Configuration",
+    autoConfigDesc: "Selections auto-configure prices below",
+    autoPriceTitle: "Auto-configured prices — fine-tune if needed",
+    noServicesMsg: "No services selected. Total is ¥0.",
+    excludedLabel: "Excluded — tap to re-add:",
+    excludeServiceTitle: "Exclude this service",
+    amoreSubtotalLabel: "Amore Subtotal",
+    amoreServicesLabel: "Amore Services",
+    // Preview
+    dressCostLabel: "Dress & Tuxedo",
+    sectionSubtotal: "Subtotal",
+    stepDate: "Date",
+    venueCostTitle: "Venue Costs",
+    venueCostSubtitle: "Venue Cost Setup",
+    foodDrinkTitle: "Food & Drinks",
+    foodDrinkSubtitle: "Linked to guest count",
+    drinksIncluded: "Included",
+    drinksNotIncluded: "Not Included",
+    venueSliderNote: "Adjust the slider to match actual venue pricing.",
+    optionalItemsSubtitle: "Add as needed",
+    calPeak: "Peak",
+    calPopular: "Popular",
+    calDiscount: "Disc.",
+    childLabel: "Children",
+    amoreServicesTitle: "Amore Services",
     categories: {
       [QuoteCategory.VENUE_FEE]: 'Venue & Facilities',
       [QuoteCategory.FOOD_DRINK]: 'Food & Beverage',
@@ -143,19 +209,19 @@ const TRANSLATIONS = {
     }
   },
   ja: {
-    title: "御見積書",
-    subtitle: "お二人の特別な日のために",
-    appIntro: "このアプリは、必要なサービスに基づいて結婚式の予算を概算するためのものです。実際の費用は、選択した会場やプランによって異なります。",
+    title: "ブライダル費用シミュレーション",
+    subtitle: "初期費用試算 · プランニング参考資料",
+    appIntro: "このシミュレーターでは、会場やサービスの選択が総費用にどう影響するかをご確認いただけます。表示価格はあくまでも参考目安です。正式な費用はAmoreプランナーと各会場で確認の上ご案内いたします。",
     guestCount: "招待客数",
-    date: "発行日",
-    totalEstimate: "御見積総額",
-    subtotalVenue: "会場関係費",
-    subtotalAmore: "Amoreサービス料",
+    date: "作成日",
+    totalEstimate: "シミュレーション合計",
+    subtotalVenue: "会場関係費（参考）",
+    subtotalAmore: "Amoreサービス料（参考）",
     subtotal: "小計",
     tax: "消費税 (10%)",
-    totalRange: "御見積総額（目安）",
+    totalRange: "シミュレーション合計（目安）",
     buffer: "(予備費 +5%)",
-    disclaimer: "この見積書は概算です。価格は空き状況や会場の最終確認により変更される場合があります。",
+    disclaimer: "本資料はプランニング用の費用シミュレーションであり、正式な見積書・契約書ではありません。表示金額はすべて参考目安です。正式費用はAmoreプランナーより別途ご案内いたします。",
     budgetFriendlyNote: "ご予算に応じたプランのご提案も可能です。お気軽にご相談ください。",
     menuBook: "会場費用の選択",
     menuBookDesc: "会場費用の算出方法をお選びください。",
@@ -180,9 +246,9 @@ const TRANSLATIONS = {
     included: "見積に含まれています",
     notIncluded: "未選択",
     nextStepAmore: "次へ: Amoreサービス",
-    generateSummary: "最終確認へ",
-    viewDocument: "見積書を表示",
-    estimateTotal: "御見積総額（税込）",
+    generateSummary: "シミュレーション結果へ",
+    viewDocument: "シミュレーション表示",
+    estimateTotal: "シミュレーション合計（税込）",
     quantity: "数量",
     table: "卓",
     perPerson: "1名あたり",
@@ -194,6 +260,62 @@ const TRANSLATIONS = {
     serviceDetails: "サービス詳細",
     generatedOn: "作成日時",
     amoreTokyo: "Amore Wedding Tokyo",
+    // Date step
+    dateStepTitle: "挙式日程を選択",
+    dateStepSubtitle: "挙式日を選択してください — 吉日や需要情報が表示されます",
+    skipDate: "日程をスキップして次へ",
+    nextToSetup: "次へ: 基本設定",
+    legendBest: "大安 — 最良",
+    legendGood: "友引 — 吉",
+    legendBad: "仏滅/赤口 — 凶",
+    legendPeak: "繁忙 = 繁忙期加算あり",
+    legendMyanmarGood: "ミャンマー吉日（木曜）",
+    legendMyanmarAvoid: "ミャンマー避ける日",
+    demandSurcharge: "繁忙期加算",
+    discountConsult: "割引交渉をご相談ください",
+    normalPrice: "通常料金",
+    weddingDateLabel: "挙式予定日",
+    // Venue
+    venueCostTitle: "会場費用",
+    venueCostSubtitle: "会場費用設定",
+    venuePackageTitle: "会場パッケージ料金",
+    venuePackageSubtitle: "必須項目（全て含まれます）",
+    requiredBadge: "必須",
+    venueSliderNote: "スライダーで会場ごとの参考価格に調整してください。",
+    sec1Subtotal: "Section 1 小計",
+    foodDrinkTitle: "料理・飲み物",
+    foodDrinkSubtitle: "ゲスト人数に連動",
+    foodPlanLabel: "料理プラン",
+    drinksLabel: "フリードリンク",
+    drinksIncluded: "含む",
+    drinksNotIncluded: "含まない",
+    childLabel: "お子様",
+    sec2Subtotal: "Section 2 小計",
+    optionalItemsTitle: "オプション項目",
+    optionalItemsSubtitle: "必要に応じて追加",
+    sec3Subtotal: "Section 3 小計",
+    venueSubtotalLabel: "会場小計",
+    childFeeLabel: "お子様料金",
+    // Amore
+    amoreServicesTitle: "Amore サービス",
+    standardPackageTitle: "スタンダードパッケージ",
+    customModeTitle: "カスタム選択",
+    amoreConfigDesc: "Amoreサービスの構成を選択してください。",
+    serviceConfigTitle: "サービス構成を選択",
+    autoConfigDesc: "選択内容に基づいて価格が自動設定されます",
+    autoPriceTitle: "選択内容に基づく自動設定価格 — 調整可能",
+    noServicesMsg: "サービスが選択されていません。合計は ¥0 です。",
+    excludedLabel: "除外 — タップで追加:",
+    excludeServiceTitle: "このサービスを除外",
+    amoreSubtotalLabel: "Amore小計",
+    amoreServicesLabel: "Amoreサービス",
+    calPeak: "繁忙",
+    calPopular: "人気",
+    calDiscount: "割",
+    stepDate: "日程",
+    // Preview
+    dressCostLabel: "ドレス・タキシード",
+    sectionSubtotal: "小計",
     categories: {
       [QuoteCategory.VENUE_FEE]: '会場費・設備',
       [QuoteCategory.FOOD_DRINK]: '料理・飲料',
@@ -205,18 +327,18 @@ const TRANSLATIONS = {
     }
   },
   my: {
-    title: "မင်္ဂလာဆောင် ဝန်ဆောင်မှု ခန့်မှန်းခြေစာရင်း",
-    subtitle: "သင့်မင်္ဂလာပွဲအတွက် အထူးစီစဉ်ထားခြင်း",
-    appIntro: "ဤအက်ပ်သည် သင်လိုအပ်သော ဝန်ဆောင်မှုများပေါ်မူတည်၍ သင်၏မင်္ဂလာဆောင်ဘတ်ဂျက်ကို ခန့်မှန်းရန်ဖြစ်သည်။ အမှန်တကယ်ကုန်ကျစရိတ်မှာ သင်ရွေးချယ်ထားသော ခန်းမနှင့် အစီစဉ်ပေါ်တွင် မူတည်ပါသည်။",
+    title: "မင်္ဂလာဆောင် ဘတ်ဂျက် စီမံချက်",
+    subtitle: "ကနဦးကုန်ကျစရိတ် ခန့်မှန်းခြေ · စီမံကိန်းဆွေးနွေးရန်",
+    appIntro: "ဤ simulator ကို အသုံးပြု၍ ခန်းမနှင့် ဝန်ဆောင်မှုရွေးချယ်မှုများသည် စုစုပေါင်းဘတ်ဂျက်ကို မည်ကဲ့သို့ သက်ရောက်သည်ကို စစ်ဆေးကြည့်ရှုနိုင်ပါသည်။ ဤဈေးနှုန်းများသည် ကိုးကားဆောင်ရွက်ရန် သာဖြစ်သည်။ တိကျသောကုန်ကျစရိတ်ကို Amore planner မှ အတည်ပြုပေးမည်ဖြစ်သည်။",
     guestCount: "ဧည့်သည်အရေအတွက်",
     date: "ရက်စွဲ",
-    totalEstimate: "စုစုပေါင်း ခန့်မှန်းခြေစာရင်း",
+    totalEstimate: "ခန့်မှန်းကြိုတင် ကုန်ကျစရိတ်",
     subtotalVenue: "ခန်းမနှင့် ဝန်ဆောင်မှုစရိတ်",
     subtotalAmore: "Amore ဝန်ဆောင်မှုများ",
     subtotal: "စုစုပေါင်း",
     tax: "အခွန် (၁၀%)",
     totalRange: "ခန့်မှန်းခြေ စုစုပေါင်း",
-    disclaimer: "ဤစာရွက်စာတမ်းသည် ခန့်မှန်းခြေသာဖြစ်သည်။ ဈေးနှုန်းများသည် ခန်းမ၏ အတည်ပြုချက်အပေါ် မူတည်၍ ပြောင်းလဲနိုင်သည်။",
+    disclaimer: "ဤစာရွက်စာတမ်းသည် ကနဦးကုန်ကျစရိတ် ခန့်မှန်းခြေ (simulation) သာဖြစ်ပြီး တရားဝင် ကမ်းလှမ်းစာ သို့မဟုတ် စာချုပ်မဟုတ်ပါ။ ကိန်းဂဏာန်းများအားလုံး ကိုးကားသုံးသပ်ရန်သာဖြစ်သည်။ တိကျသောကုန်ကျစရိတ်ကို Amore planner မှ ဆက်သွယ်ညှိနှိုင်းပြောဆိုပေးမည်ဖြစ်သည်။",
     budgetFriendlyNote: "ဘတ်ဂျက်နှင့်အညီ ညှိနှိုင်းလိုပါက ပွင့်လင်းလွတ်လပ်စွာ ဆွေးနွေးနိုင်ပါသည်။ လူကြီးမင်းတို့ စိတ်တိုင်းကျဖြစ်စေရန် ကျွန်ုပ်တို့ဘက်မှ အတတ်နိုင်ဆုံး ကူညီဆောင်ရွက်ပေးပါမည်။",
     menuBook: "ခန်းမစရိတ် တွက်ချက်ခြင်း",
     menuBookDesc: "ခန်းမစရိတ်ကို မည်သို့တွက်ချက်လိုသနည်း?",
@@ -241,9 +363,9 @@ const TRANSLATIONS = {
     included: "စာရင်းထဲထည့်ပြီး",
     notIncluded: "မရွေးချယ်ရသေးပါ",
     nextStepAmore: "ရှေ့ဆက်မည်: Amore ဝန်ဆောင်မှုများ",
-    generateSummary: "အကျဉ်းချုပ်ကြည့်မည်",
-    viewDocument: "စာရွက်စာတမ်းကြည့်မည်",
-    estimateTotal: "စုစုပေါင်း (အခွန်အပါဝင်)",
+    generateSummary: "ကြိုတင်ခန့်မှန်းခြေ ကြည့်မည်",
+    viewDocument: "Simulation ကြည့်မည်",
+    estimateTotal: "ခန့်မှန်းစုစုပေါင်း (အခွန်အပါဝင်)",
     quantity: "အရေအတွက်",
     table: "စားပွဲ",
     perPerson: "တစ်ဦးလျှင်",
@@ -255,6 +377,62 @@ const TRANSLATIONS = {
     serviceDetails: "ဝန်ဆောင်မှု အသေးစိတ်",
     generatedOn: "ထုတ်ပေးသည့်အချိန်",
     amoreTokyo: "Amore Wedding Tokyo",
+    // Date step
+    dateStepTitle: "မင်္ဂလာဆောင်ရက် ရွေးချယ်ခြင်း",
+    dateStepSubtitle: "မင်္ဂလာဆောင်ရက် ရွေးချယ်ပါ — မင်္ဂလာကြီးသောရက်နှင့် လူစည်ကားမှုကို ကြည့်ပါ",
+    skipDate: "ရက်မရွေးဘဲ ဆက်သွားမည်",
+    nextToSetup: "ရှေ့ဆက်မည်: အခြေခံ သတ်မှတ်ချက်",
+    legendBest: "大安 — အကောင်းဆုံး",
+    legendGood: "友引 — ကောင်း",
+    legendBad: "仏滅/赤口 — ရှောင်ကြဉ်",
+    legendPeak: "繁忙 = ဈေးနှုန်းပိုဆောင်းအပ် ကိုက်သည်",
+    legendMyanmarGood: "မြန်မာ မင်္ဂလာရက် (ကြာသပတေး)",
+    legendMyanmarAvoid: "မြန်မာ ရှောင်ကြဉ်သင့်သောရက်",
+    demandSurcharge: "ဈေးနှုန်းပိုဆောင်းအပ်",
+    discountConsult: "လျော့ဈေး ညှိနှိုင်းနိုင်ပါသည် — planner ကိုမေးပါ",
+    normalPrice: "ပုံမှန်ဈေးနှုန်း",
+    weddingDateLabel: "မင်္ဂလာဆောင်ရက်",
+    // Venue
+    venueCostTitle: "ခန်းမ ကုန်ကျစရိတ်",
+    venueCostSubtitle: "ခန်းမ ကုန်ကျစရိတ် သတ်မှတ်ခြင်း",
+    venuePackageTitle: "ခန်းမ Package ကြေး",
+    venuePackageSubtitle: "မဖြစ်မနေ ပါဝင်ရမည့် အရာများ — အားလုံး ပါဝင်သည်",
+    requiredBadge: "မဖြစ်မနေ",
+    venueSliderNote: "ခန်းမနှင့်ကိုက်ညီသော ဈေးနှုန်းသို့ ညှိနှိုင်းပါ။",
+    sec1Subtotal: "အပိုင်း ၁ စုစုပေါင်း",
+    foodDrinkTitle: "အစားအသောက်နှင့် အဖျော်ယမကာ",
+    foodDrinkSubtitle: "ဧည့်သည်အရေအတွက်နှင့် ချိတ်ဆက်",
+    foodPlanLabel: "အစားအသောက် Plan",
+    drinksLabel: "အချိုရည် (ကန့်သတ်မရှိ)",
+    drinksIncluded: "ပါဝင်သည်",
+    drinksNotIncluded: "မပါ",
+    childLabel: "ကလေး",
+    sec2Subtotal: "အပိုင်း ၂ စုစုပေါင်း",
+    optionalItemsTitle: "ရွေးချယ်နိုင်သော အရာများ",
+    optionalItemsSubtitle: "လိုအပ်သလို ထည့်ပါ",
+    sec3Subtotal: "အပိုင်း ၃ စုစုပေါင်း",
+    venueSubtotalLabel: "ခန်းမ စုစုပေါင်း",
+    childFeeLabel: "ကလေး ကြေး",
+    // Amore
+    amoreServicesTitle: "Amore ဝန်ဆောင်မှုများ",
+    standardPackageTitle: "စံ Package",
+    customModeTitle: "စိတ်ကြိုက် ရွေးချယ်ခြင်း",
+    amoreConfigDesc: "Amore ဝန်ဆောင်မှုများကို မည်သို့ ပြင်ဆင်လိုသည်ကို ရွေးချယ်ပါ။",
+    serviceConfigTitle: "ဝန်ဆောင်မှု ဖွဲ့စည်းပုံ ရွေးချယ်ပါ",
+    autoConfigDesc: "ရွေးချယ်ချက်များအပေါ် ဈေးနှုန်းများ အလိုအလျောက် သတ်မှတ်ပေးသည်",
+    autoPriceTitle: "အလိုအလျောက် သတ်မှတ်ထားသော ဈေးနှုန်းများ — ညှိနှိုင်းနိုင်သည်",
+    noServicesMsg: "ဝန်ဆောင်မှု မရွေးထားပါ။ စုစုပေါင်းမှာ ¥0 ဖြစ်သည်။",
+    excludedLabel: "ဖယ်ထားသည် — ထပ်ထည့်ရန် နှိပ်ပါ:",
+    excludeServiceTitle: "ဤဝန်ဆောင်မှုကို ဖယ်ထားမည်",
+    amoreSubtotalLabel: "Amore စုစုပေါင်း",
+    amoreServicesLabel: "Amore ဝန်ဆောင်မှုများ",
+    calPeak: "မြင့်",
+    calPopular: "လူကြိုက်",
+    calDiscount: "လျော့",
+    stepDate: "ရက်",
+    // Preview
+    dressCostLabel: "ဝတ်စုံ",
+    sectionSubtotal: "စုစုပေါင်း",
     categories: {
       [QuoteCategory.VENUE_FEE]: 'ခန်းမနှင့် အဆောက်အအုံ',
       [QuoteCategory.FOOD_DRINK]: 'အစားအသောက်နှင့် အဖျော်ယမကာ',
@@ -370,15 +548,76 @@ const INITIAL_SERVICES: (Omit<AmoreService, 'name'> & { name: Record<string, str
   },
 ];
 
+// --- CALENDAR UTILITIES ---
+const ROKUYO_DATA = [
+  { ja: '先勝', en: 'Sensho',     color: 'text-blue-500',  bg: 'bg-blue-50',   border: 'border-blue-200',   tier: 'mild' },
+  { ja: '友引', en: 'Tomobiki',   color: 'text-green-600', bg: 'bg-green-50',  border: 'border-green-200',  tier: 'good' },
+  { ja: '先負', en: 'Senbu',      color: 'text-indigo-400',bg: 'bg-indigo-50', border: 'border-indigo-200', tier: 'mild' },
+  { ja: '仏滅', en: 'Butsumetsu', color: 'text-gray-400',  bg: 'bg-gray-50',   border: 'border-gray-200',   tier: 'bad'  },
+  { ja: '大安', en: 'Taian',      color: 'text-rose-600',  bg: 'bg-rose-50',   border: 'border-rose-200',   tier: 'best' },
+  { ja: '赤口', en: 'Shakko',     color: 'text-red-500',   bg: 'bg-red-50',    border: 'border-red-200',    tier: 'bad'  },
+];
+
+const CHINESE_NEW_YEARS: [number, number, number][] = [
+  [2023, 1, 22], [2024, 2, 10], [2025, 1, 29], [2026, 2, 17], [2027, 2, 6], [2028, 1, 26],
+];
+
+function getRokuyoIndex(date: Date): number {
+  const ts = date.getTime();
+  let refTs = -Infinity;
+  for (const [y, m, d] of CHINESE_NEW_YEARS) {
+    const cny = new Date(y, m - 1, d).getTime();
+    if (cny <= ts && cny > refTs) refTs = cny;
+  }
+  if (refTs === -Infinity) return 0;
+  const daysSince = Math.floor((ts - refTs) / 86400000);
+  const lunarMonth = Math.floor(daysSince / 29.53059) + 1;
+  const lunarDay   = Math.floor(daysSince % 29.53059) + 1;
+  return ((lunarMonth + lunarDay - 2) % 6 + 6) % 6;
+}
+
+function getMyanmarDayInfo(date: Date): { label: string; tier: 'good' | 'neutral' | 'avoid' } {
+  const dow = date.getDay();
+  if (dow === 4) return { label: 'ကြာသ ✓', tier: 'good' };
+  const ts = date.getTime();
+  let refTs = -Infinity;
+  for (const [y, m, d] of CHINESE_NEW_YEARS) {
+    const cny = new Date(y, m - 1, d).getTime();
+    if (cny <= ts && cny > refTs) refTs = cny;
+  }
+  const lunarDay = refTs === -Infinity ? 1 : (Math.floor((ts - refTs) / 86400000) % 30) + 1;
+  if (lunarDay === 15) return { label: 'လပြည့် ✓', tier: 'good' };
+  if ([9, 18, 27].includes(lunarDay)) return { label: 'ရက်ကြမ်း', tier: 'avoid' };
+  return { label: '', tier: 'neutral' };
+}
+
+type DemandLevel = 'peak' | 'high' | 'normal' | 'low';
+function getDateDemand(date: Date): { level: DemandLevel; labelJa: string; labelEn: string; labelMy: string; surcharge: number } {
+  const dow = date.getDay();
+  const isWeekend = dow === 0 || dow === 6;
+  const rokuyo = getRokuyoIndex(date);
+  if (rokuyo === 4 && isWeekend) return { level: 'peak',   labelJa: '大安×週末 ― 繁忙期',  labelEn: 'Taian × Weekend — Peak',       labelMy: '大安×週末 ― ဈေးနှုန်းမြင့်', surcharge: 50000 };
+  if (rokuyo === 4)              return { level: 'high',   labelJa: '大安 ― 人気',           labelEn: 'Taian — Popular',              labelMy: '大安 ― လူကြိုက်မြင့်',       surcharge: 20000 };
+  if (isWeekend && rokuyo === 1) return { level: 'high',   labelJa: '友引×週末',             labelEn: 'Tomobiki × Weekend',           labelMy: '友引×週末',                   surcharge: 20000 };
+  if (isWeekend)                 return { level: 'high',   labelJa: '週末',                  labelEn: 'Weekend',                      labelMy: 'စနေ-တနင်္ဂနွေ',              surcharge: 10000 };
+  if (rokuyo === 3 && !isWeekend)return { level: 'low',    labelJa: '仏滅 ― 割引交渉可',     labelEn: 'Butsumetsu — Discount',        labelMy: '仏滅 ― လျော့ဈေး',            surcharge: 0     };
+  return                                { level: 'normal', labelJa: '平日',                  labelEn: 'Weekday',                      labelMy: 'ရုံးဆင်းနေ့',                surcharge: 0     };
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('setup');
+  const [activeTab, setActiveTab] = useState<TabType>('date');
+  const [weddingDate, setWeddingDate] = useState<Date | null>(null);
+  const [calYear,  setCalYear]  = useState(new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [language, setLanguage] = useState<Language>('en');
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
 
   // Venue section state
-  const [venuePackagePrice, setVenuePackagePrice] = useState(200000);
+  const [mandatoryPrices, setMandatoryPrices] = useState<Record<string, number>>(
+    Object.fromEntries(VENUE_MANDATORY_ITEMS.map(i => [i.id, i.defaultPrice]))
+  );
   const [foodPlan, setFoodPlan] = useState<FoodPlanType>('course');
-  const [foodPricePerPerson, setFoodPricePerPerson] = useState(13000);
+  const [foodPricePerPerson, setFoodPricePerPerson] = useState(FOOD_PLANS['course'].minPrice);
   const [drinksIncluded, setDrinksIncluded] = useState(true);
   const [drinkPricePerPerson, setDrinkPricePerPerson] = useState(3800);
   const [childCount, setChildCount] = useState(0);
@@ -388,7 +627,8 @@ export default function App() {
   // Amore section state
   const [amoreMode, setAmoreMode] = useState<'standard' | 'custom' | null>(null);
   const [amoreAddons, setAmoreAddons] = useState({
-    dressCount: 1, sulyarYitPat: false, makeupRehearsal: true,
+    dressCount: 1 as 0 | 1 | 2, sulyarYitPat: false,
+    makeupRehearsal: true, makeupLooks: 1 as 0 | 1 | 2,
     realBouquet: false, guestFlowers: false, placingCards: false,
     photoUpgrade: false, aisleFlower: false,
   });
@@ -421,20 +661,38 @@ export default function App() {
   );
 
   // Addon questionnaire → service card auto-configuration
+  // Only updates price ranges / quantities and questionnaire-driven selections (dress, makeup, bouquet, guest flowers)
+  // Does NOT override isSelected for core services — those are set on mode entry and toggled by the user
   useEffect(() => {
     if (amoreMode !== 'custom') return;
     setAmoreServices(prev => prev.map(s => {
       switch (s.id) {
-        case '1':   return { ...s, isSelected: true, minPrice: amoreAddons.sulyarYitPat ? 120000 : 105000, currentPrice: amoreAddons.sulyarYitPat ? Math.max(s.currentPrice, 120000) : s.currentPrice };
-        case '2':   return { ...s, isSelected: true };
-        case 'dress': return { ...s, isSelected: true, minPrice: amoreAddons.dressCount >= 2 ? 55000 : 35000, currentPrice: amoreAddons.dressCount >= 2 ? Math.max(s.currentPrice, 55000) : Math.min(s.currentPrice, 75000) };
-        case 'makeup': return { ...s, isSelected: true, minPrice: amoreAddons.makeupRehearsal ? 35000 : 25000, maxPrice: amoreAddons.makeupRehearsal ? 85000 : 55000 };
-        case 'amore_bouquet': return { ...s, isSelected: amoreAddons.realBouquet, currentPrice: addonPrices.realBouquet };
-        case 'amore_guest_fl': return { ...s, isSelected: amoreAddons.guestFlowers, quantity: Math.ceil(venueInfo.guestCount / 10) };
-        case 'amore_main_fl': return { ...s, isSelected: true, currentPrice: 70000 };
-        case 'webinv':   return { ...s, isSelected: true, currentPrice: amoreAddons.placingCards ? 15000 : 10000 };
-        case 'transport':return { ...s, isSelected: true, currentPrice: 15000 };
-        default: return s;
+        // Dress: questionnaire (dressCount) controls isSelected
+        case 'dress':
+          return { ...s, isSelected: amoreAddons.dressCount > 0 };
+        // Makeup: questionnaire (makeupLooks) controls isSelected + price range
+        case 'makeup': {
+          if (amoreAddons.makeupLooks === 0) return { ...s, isSelected: false };
+          const configs: Record<string, [number, number, number]> = {
+            '1':  [25000,  55000, 25000],
+            '1R': [35000,  85000, 50000],
+            '2':  [45000,  90000, 45000],
+            '2R': [55000, 110000, 55000],
+          };
+          const key = `${amoreAddons.makeupLooks}${amoreAddons.makeupRehearsal ? 'R' : ''}`;
+          const [newMin, newMax, newDef] = configs[key];
+          const rangeChanged = s.minPrice !== newMin || s.maxPrice !== newMax;
+          const newPrice = rangeChanged ? newDef : Math.min(Math.max(s.currentPrice, newMin), newMax);
+          return { ...s, isSelected: s.isSelected, minPrice: newMin, maxPrice: newMax, currentPrice: newPrice };
+        }
+        // Optional services: toggled by questionnaire answers
+        case 'amore_bouquet':
+          return { ...s, isSelected: amoreAddons.realBouquet, currentPrice: addonPrices.realBouquet };
+        case 'amore_guest_fl':
+          return { ...s, isSelected: amoreAddons.guestFlowers, quantity: Math.ceil(venueInfo.guestCount / 10) };
+        // All other services: preserve user's manual isSelected toggle, update nothing
+        default:
+          return s;
       }
     }));
   }, [amoreMode, amoreAddons, addonPrices, venueInfo.guestCount]);
@@ -442,12 +700,21 @@ export default function App() {
   useEffect(() => {
     if (amoreMode === 'standard') {
       setAmoreServices(prev => prev.map(s => ({ ...s, isSelected: ['1','2','amore_main_fl','makeup','webinv','transport'].includes(s.id) })));
+    } else if (amoreMode === 'custom') {
+      // Set default selections on entry; user can toggle freely after this
+      setAmoreServices(prev => prev.map(s => ({
+        ...s,
+        isSelected: ['1','2','dress','amore_main_fl','makeup','webinv','transport'].includes(s.id),
+      })));
     } else if (amoreMode === null) {
       setAmoreServices(prev => prev.map(s => ({ ...s, isSelected: false })));
     }
   }, [amoreMode]);
 
   const t = TRANSLATIONS[language];
+
+  const getDemandLabel = (d: ReturnType<typeof getDateDemand>) =>
+    language === 'ja' ? d.labelJa : language === 'en' ? d.labelEn : d.labelMy;
 
   const getServiceName = (id: string) => {
     const original = INITIAL_SERVICES.find(s => s.id === id);
@@ -457,9 +724,9 @@ export default function App() {
   const getAmoreOptionText = (service: AmoreService) => {
     const configs: Record<string, Record<string, string>> = {
       '1': {
-        en: service.currentPrice >= 120000 ? "Sulryar yit pat burmese style included." : (service.currentPrice >= 115000 ? "Includes chapel style." : "Standard planning without chapel."),
-        ja: service.currentPrice >= 120000 ? "ミャンマー伝統儀式（スリヤ・イッパ）対応。" : (service.currentPrice >= 115000 ? "チャペル挙式進行を含む。" : "スタンダードな披露宴のみの進行。"),
-        my: service.currentPrice >= 120000 ? "မြန်မာရိုးရာ စုလျားရစ်ပတ် မင်္ဂလာအခမ်းအနား ပါဝင်သည်။" : (service.currentPrice >= 115000 ? "ဝတ်ပြုဆောင် အစီအစဉ် ပါဝင်သည်။" : "ခန်းမအတွင်း အစီအစဉ်သာ ပါဝင်သည်။")
+        en: amoreAddons.sulyarYitPat ? "Includes Sulryar Yit Pat (Myanmar ceremony)." : "Standard planning & MC.",
+        ja: amoreAddons.sulyarYitPat ? "ミャンマー伝統儀式（スリヤ・イッパ）対応。" : "スタンダードな披露宴進行のみ。",
+        my: amoreAddons.sulyarYitPat ? "မြန်မာရိုးရာ စုလျားရစ်ပတ် မင်္ဂလာအခမ်းအနား ပါဝင်သည်။" : "ပွဲတော် စီစဉ်မှုနှင့် MC ဝန်ဆောင်မှု"
       },
       'amore_main_fl': {
         en: service.currentPrice >= 120000 ? "One Rank Up Luxury Floral" : "Standard Main Table Arrangement",
@@ -467,19 +734,24 @@ export default function App() {
         my: service.currentPrice >= 120000 ? "အဆင့်မြင့် ပန်းအလှဆင်မှု" : "စံနှုန်းမီ ပင်မစားပွဲ ပန်းအလှဆင်မှု"
       },
       '2': {
-        en: service.currentPrice >= 150000 ? "Full HD Quality / Premium Cuts" : "Standard Day-of Recording",
-        ja: service.currentPrice >= 150000 ? "高画質フルHD / プレミアム編集" : "標準当日記録撮影",
-        my: service.currentPrice >= 150000 ? "Full HD အရည်အသွေးမြင့် မှတ်တမ်း" : "စံနှုန်းမီ မင်္ဂလာပွဲနေ့ မှတ်တမ်း"
+        en: amoreAddons.photoUpgrade ? "Upgraded photo/video size included." : "Standard day-of recording.",
+        ja: amoreAddons.photoUpgrade ? "フォトサイズアップグレード込み。" : "標準当日記録撮影。",
+        my: amoreAddons.photoUpgrade ? "ဓာတ်ပုံ/ဗီဒီယို အဆင့်မြင့် ပါဝင်သည်။" : "စံနှုန်းမီ မင်္ဂလာပွဲနေ့ မှတ်တမ်း"
       },
       'dress': {
-        en: service.currentPrice >= 50000 ? "2 dresses and accessories set" : "One dress and accessories set",
-        ja: service.currentPrice >= 50000 ? "ドレス2点と小物一式のセット" : "ドレス1点と小物一式のセット",
-        my: service.currentPrice >= 50000 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
+        en: amoreAddons.dressCount === 0 ? "No dress rental — excluded from total." : amoreAddons.dressCount >= 2 ? "2 dresses + groom suit with accessories." : "1 dress + groom suit with accessories.",
+        ja: amoreAddons.dressCount === 0 ? "衣装なし（合計から除外）。" : amoreAddons.dressCount >= 2 ? "ドレス2点 & タキシードと小物一式のセット。" : "ドレス1点 & タキシードと小物一式のセット。",
+        my: amoreAddons.dressCount === 0 ? "ဝတ်စုံ မပါ (စုစုပေါင်းမှ ဖယ်ထုတ်)" : amoreAddons.dressCount >= 2 ? "ဝတ်စုံ ၂ စုံနှင့် အသုံးအဆောင်များ" : "ဝတ်စုံ ၁ စုံနှင့် အသုံးအဆောင်များ"
       },
       'makeup': {
-        en: service.currentPrice >= 70000 ? "2 looks with trial rehearsal" : (service.currentPrice >= 50000 ? "With trial rehearsal included" : "One standard bridal look"),
-        ja: service.currentPrice >= 70000 ? "ヘアメイク2スタイル（リハーサル込）" : (service.currentPrice >= 50000 ? "ヘアメイク1スタイル（リハーサル込）" : "当日ヘアメイクのみ"),
-        my: service.currentPrice >= 70000 ? "အလှပြင် ၂ မျိုး (အစမ်းပြင်ဆင်မှု ပါဝင်)" : (service.currentPrice >= 50000 ? "အလှပြင် ၁ မျိုး (အစမ်းပြင်ဆင်မှု ပါဝင်)" : "မင်္ဂလာပွဲနေ့ အလှပြင်ခြင်း")
+        en: amoreAddons.makeupLooks === 0 ? "No hair & makeup — excluded from total." : `Bridal hair & makeup — ${amoreAddons.makeupLooks === 2 ? '2 looks' : '1 look'}${amoreAddons.makeupRehearsal ? ' + rehearsal' : ''}.`,
+        ja: amoreAddons.makeupLooks === 0 ? "ヘアメイクなし（合計から除外）。" : `ヘアメイク（新婦）— ${amoreAddons.makeupLooks === 2 ? '2ルック' : '1ルック'}${amoreAddons.makeupRehearsal ? ' + リハーサル込み' : ''}。`,
+        my: amoreAddons.makeupLooks === 0 ? "ဆံပင်/အလှပြင် မပါ (စုစုပေါင်းမှ ဖယ်ထုတ်)" : `မင်္ဂလာပွဲနေ့ ဆံပင်/အလှပြင် — ${amoreAddons.makeupLooks === 2 ? '၂ ကြိမ်' : '၁ ကြိမ်'}${amoreAddons.makeupRehearsal ? ' + အစမ်းပါ' : ''}`,
+      },
+      'webinv': {
+        en: amoreAddons.placingCards ? `Web invitation + place cards (¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/person).` : "Web invitation & seating chart.",
+        ja: amoreAddons.placingCards ? `Web招待状 + 席札（¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/人）。` : "Web招待状 & 席次ボード。",
+        my: amoreAddons.placingCards ? `Web ဖိတ်စာ + နေရာကတ်ပြား (¥${AMORE_ADDON_CONFIG.placingCardPerPerson}/ဦး)။` : "Web ဖိတ်စာနှင့် ဧည့်သည်နေရာပြ ဘုတ်"
       }
     };
 
@@ -578,13 +850,13 @@ export default function App() {
   };
 
   const toggleAmoreService = (id: string) => {
-    setAmoreServices(prev => prev.map(s => 
+    setAmoreServices(prev => prev.map(s =>
       s.id === id ? { ...s, isSelected: !s.isSelected } : s
     ));
   };
 
   const updateAmorePrice = (id: string, price: number) => {
-    setAmoreServices(prev => prev.map(s => 
+    setAmoreServices(prev => prev.map(s =>
       s.id === id ? { ...s, currentPrice: price } : s
     ));
   };
@@ -595,6 +867,16 @@ export default function App() {
     ));
   };
 
+  // Addon-inclusive price for each service (base slider + questionnaire addons on top)
+  const getEffectivePrice = (service: AmoreService): number => {
+    let p = service.currentPrice;
+    if (service.id === 'dress' && amoreAddons.dressCount >= 2) p += AMORE_ADDON_CONFIG.dressSecond;
+    if (service.id === '1'     && amoreAddons.sulyarYitPat)    p += AMORE_ADDON_CONFIG.sulyarYitPat;
+    if (service.id === '2'     && amoreAddons.photoUpgrade)    p += addonPrices.photoUpgrade;
+    if (service.id === 'webinv'&& amoreAddons.placingCards)    p += venueInfo.guestCount * AMORE_ADDON_CONFIG.placingCardPerPerson;
+    return p;
+  };
+
   // ── Totals ──
   const venueFoodTotal  = foodPricePerPerson * venueInfo.guestCount;
   const venueDrinkTotal = drinksIncluded ? drinkPricePerPerson * venueInfo.guestCount : 0;
@@ -603,17 +885,20 @@ export default function App() {
     const item = VENUE_OPTIONAL_ITEMS.find(i => i.id === id);
     return item ? sum + (item.isPerGuest ? price * venueInfo.guestCount : price) : sum;
   }, 0);
-  const venueSubtotal = venuePackagePrice + venueFoodTotal + venueDrinkTotal + venueChildTotal + venueOptTotal;
+  const venueMandatoryTotal = VENUE_MANDATORY_ITEMS.reduce((sum, item) => sum + (mandatoryPrices[item.id] ?? item.defaultPrice), 0);
+  const venueSubtotal = venueMandatoryTotal + venueFoodTotal + venueDrinkTotal + venueChildTotal + venueOptTotal;
 
   let amoreSubtotal = 0;
   if (amoreMode === 'standard') {
     amoreSubtotal = AMORE_STANDARD_PRETAX;
   } else if (amoreMode === 'custom') {
-    amoreSubtotal = amoreServices.filter(s => s.isSelected).reduce((sum, s) => sum + s.currentPrice * (s.quantity || 1), 0);
+    amoreSubtotal = amoreServices.filter(s => s.isSelected).reduce((sum, s) => sum + getEffectivePrice(s) * (s.quantity || 1), 0);
     if (amoreAddons.aisleFlower) amoreSubtotal += addonPrices.aisleFlower;
   }
   
-  const subtotalBeforeTax = venueSubtotal + amoreSubtotal;
+  const dateDemand = weddingDate ? getDateDemand(weddingDate) : null;
+  const demandSurcharge = dateDemand ? dateDemand.surcharge : 0;
+  const subtotalBeforeTax = venueSubtotal + amoreSubtotal + demandSurcharge;
   const taxAmount = Math.floor(subtotalBeforeTax * venueInfo.taxRate);
   const grandTotal = subtotalBeforeTax + taxAmount;
   
@@ -624,10 +909,11 @@ export default function App() {
   const selectedAmoreServices = amoreServices.filter(s => s.isSelected);
 
   const steps = [
-    { id: 'setup', label: t.step1, icon: <Wallet size={16}/> },
+    { id: 'date',    label: t.stepDate, icon: <Calendar size={16}/> },
+    { id: 'setup',   label: t.step1, icon: <Wallet size={16}/> },
     { id: 'catalog', label: t.step2, icon: <BookOpen size={16}/> },
-    { id: 'amore', label: t.step3, icon: <LayoutGrid size={16}/> },
-    { id: 'preview', label: t.step4, icon: <FileText size={16}/> }
+    { id: 'amore',   label: t.step3, icon: <LayoutGrid size={16}/> },
+    { id: 'preview', label: t.step4, icon: <FileText size={16}/> },
   ];
 
   return (
@@ -669,6 +955,143 @@ export default function App() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+        {/* ── Date Selection Tab ── */}
+        <div className={activeTab === 'date' ? 'block animate-in fade-in' : 'hidden'}>
+          <div className="max-w-3xl mx-auto space-y-8">
+            <header className="text-center space-y-2">
+              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">{t.dateStepTitle}</h2>
+              <p className="text-gray-400 text-sm">{t.dateStepSubtitle}</p>
+            </header>
+
+            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 space-y-5">
+              {/* Month navigation */}
+              <div className="flex items-center justify-between">
+                <button onClick={() => { const d = new Date(calYear, calMonth - 1, 1); setCalYear(d.getFullYear()); setCalMonth(d.getMonth()); }}
+                  className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xl font-bold transition-all">‹</button>
+                <div className="text-center">
+                  <div className="font-serif font-bold text-xl text-gray-900">
+                    {new Date(calYear, calMonth).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">
+                    {new Date(calYear, calMonth).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                  </div>
+                </div>
+                <button onClick={() => { const d = new Date(calYear, calMonth + 1, 1); setCalYear(d.getFullYear()); setCalMonth(d.getMonth()); }}
+                  className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 text-xl font-bold transition-all">›</button>
+              </div>
+
+              {/* Day-of-week headers */}
+              <div className="grid grid-cols-7 gap-1">
+                {['日','月','火','水','木','金','土'].map((d, i) => (
+                  <div key={d} className={`text-center text-[10px] font-black uppercase tracking-wide pb-1 ${i===0?'text-red-400':i===6?'text-blue-400':'text-gray-400'}`}>{d}</div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-1.5">
+                {(() => {
+                  const firstDay = new Date(calYear, calMonth, 1).getDay();
+                  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+                  const cells = [];
+                  for (let i = 0; i < firstDay; i++) cells.push(<div key={`e${i}`} />);
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(calYear, calMonth, day);
+                    const dow = date.getDay();
+                    const isWeekend = dow === 0 || dow === 6;
+                    const rIdx = getRokuyoIndex(date);
+                    const rokuyo = ROKUYO_DATA[rIdx];
+                    const demand = getDateDemand(date);
+                    const myanmar = getMyanmarDayInfo(date);
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const isSelected = weddingDate?.getFullYear()===calYear && weddingDate?.getMonth()===calMonth && weddingDate?.getDate()===day;
+                    const isToday = date.getTime() === today.getTime();
+                    const isPast = date < today;
+                    cells.push(
+                      <button key={day} disabled={isPast} onClick={() => setWeddingDate(date)}
+                        className={`relative rounded-xl p-2 text-left transition-all min-h-[76px] flex flex-col border
+                          ${isPast ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.04] hover:shadow-md'}
+                          ${isSelected ? 'bg-amore-500 border-amore-600 shadow-lg scale-[1.06]'
+                            : demand.surcharge > 0 ? `${rokuyo.bg} border-orange-300`
+                            : `${rokuyo.bg} ${rokuyo.border}`}`}>
+                        {/* Day number */}
+                        <span className={`font-black text-base leading-none ${isSelected?'text-white':isWeekend?(dow===0?'text-red-500':'text-blue-500'):'text-gray-800'}`}>
+                          {day}{isToday && <span className={`ml-0.5 text-[8px] align-top ${isSelected?'text-white/70':'text-amore-400'}`}>●</span>}
+                        </span>
+                        {/* Rokuyo name */}
+                        <span className={`text-[10px] font-bold leading-none mt-1 ${isSelected?'text-white/90':rokuyo.color}`}>{rokuyo.ja}</span>
+                        {/* Myanmar indicator */}
+                        {myanmar.tier !== 'neutral' && (
+                          <span className={`text-[11px] font-bold leading-none mt-auto ${
+                            isSelected ? 'text-white/80'
+                            : myanmar.tier === 'good' ? 'text-teal-500'
+                            : 'text-orange-500'
+                          }`}>
+                            {myanmar.tier === 'good' ? '✓' : '△'}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  }
+                  return cells;
+                })()}
+              </div>
+
+              {/* Legend */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 pt-3 border-t border-gray-50 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-rose-50 border border-rose-200 shrink-0"/>{t.legendBest}</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-green-50 border border-green-200 shrink-0"/>{t.legendGood}</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200 shrink-0"/>{t.legendBad}</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-orange-50 border border-orange-300 shrink-0"/>{t.legendPeak}</span>
+                <span className="flex items-center gap-1.5 text-teal-600 font-bold"><span className="shrink-0">✓</span>{t.legendMyanmarGood}</span>
+                <span className="flex items-center gap-1.5 text-orange-500 font-bold"><span className="shrink-0">△</span>{t.legendMyanmarAvoid}</span>
+              </div>
+            </div>
+
+            {/* Selected date card */}
+            {weddingDate && (() => {
+              const demand = getDateDemand(weddingDate);
+              const rokuyo = ROKUYO_DATA[getRokuyoIndex(weddingDate)];
+              const myanmar = getMyanmarDayInfo(weddingDate);
+              return (
+                <div className={`rounded-[2rem] border-2 p-6 space-y-3 ${demand.level==='peak'?'bg-red-50 border-red-200':demand.level==='high'?'bg-orange-50 border-orange-200':demand.level==='low'?'bg-gray-50 border-gray-200':'bg-white border-gray-100'}`}>
+                  <div className="flex items-start justify-between flex-wrap gap-3">
+                    <div>
+                      <div className="font-serif font-bold text-xl text-gray-900">
+                        {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {weddingDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <span className={`text-sm font-black px-3 py-1 rounded-full border ${rokuyo.bg} ${rokuyo.color} ${rokuyo.border}`}>{rokuyo.ja}</span>
+                      {myanmar.label && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${myanmar.tier==='good'?'bg-teal-50 text-teal-600 border-teal-200':myanmar.tier==='avoid'?'bg-orange-50 text-orange-600 border-orange-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{myanmar.label}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-white/60">
+                    <span className={`text-sm font-bold ${demand.level==='peak'?'text-red-600':demand.level==='high'?'text-orange-600':demand.level==='low'?'text-gray-500':'text-gray-600'}`}>
+                      {demand.level==='peak'?'⚠️ ':demand.level==='high'?'📈 ':demand.level==='low'?'💡 ':''}{getDemandLabel(demand)}
+                    </span>
+                    {demand.surcharge > 0
+                      ? <span className="font-mono font-bold text-red-600">+¥{demand.surcharge.toLocaleString()} {t.demandSurcharge}</span>
+                      : demand.level==='low'
+                        ? <span className="text-xs text-gray-400">{t.discountConsult}</span>
+                        : <span className="text-xs text-gray-400">{t.normalPrice}</span>}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex justify-center pt-2">
+              <button onClick={() => setActiveTab('setup')}
+                className="bg-gray-900 text-white px-10 py-4 rounded-2xl font-bold flex items-center gap-2 hover:bg-black transition-all shadow-lg group">
+                {weddingDate ? t.nextToSetup : t.skipDate} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className={activeTab === 'setup' ? 'block animate-in fade-in' : 'hidden'}>
            <section className="bg-white rounded-[2rem] p-6 md:p-10 lg:p-14 shadow-xl border border-gray-100 space-y-12">
               <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl">
@@ -708,35 +1131,76 @@ export default function App() {
 
         <div className={activeTab === 'catalog' ? 'block space-y-8 animate-in slide-in-from-bottom-4' : 'hidden'}>
            <header className="text-center max-w-2xl mx-auto space-y-2">
-             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">会場費用</h2>
-             <p className="text-gray-500 text-sm">Venue Cost Setup</p>
+             <h2 className="text-3xl sm:text-4xl font-serif font-bold text-gray-900">{t.venueCostTitle}</h2>
+             <p className="text-gray-500 text-sm">{t.venueCostSubtitle}</p>
            </header>
 
-           {/* ── Section 1: Venue Package ── */}
+           {/* ── Section 1: Venue Package (mandatory items) ── */}
            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-6 sm:p-10 space-y-6">
              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">1</div>
                <div>
-                 <h3 className="font-bold text-gray-900">会場パッケージ料金</h3>
-                 <p className="text-xs text-gray-400">Venue Package Fee — パッケージプラン（固定費）</p>
+                 <h3 className="font-bold text-gray-900">{t.venuePackageTitle}</h3>
+                 <p className="text-xs text-gray-400">{t.venuePackageSubtitle}</p>
                </div>
              </div>
-             <div className="bg-gray-50 rounded-[1.5rem] p-6 space-y-4">
-               <div className="flex justify-between items-baseline">
-                 <span className="text-xs font-black uppercase text-gray-400 tracking-widest">会場使用料</span>
-                 <div className="text-right">
-                   <div className="text-3xl font-serif font-bold text-amore-600">¥{venuePackagePrice.toLocaleString()}</div>
-                   <div className="text-[10px] text-gray-400 uppercase font-black">1式</div>
-                 </div>
-               </div>
-               <input type="range" min={150000} max={300000} step={5000} value={venuePackagePrice}
-                 onChange={e => setVenuePackagePrice(Number(e.target.value))}
-                 className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
-               <div className="flex justify-between text-xs text-gray-400 font-mono">
-                 <span>¥150,000</span><span>¥300,000</span>
-               </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               {VENUE_MANDATORY_ITEMS.map(item => {
+                 const price = mandatoryPrices[item.id] ?? item.defaultPrice;
+                 return (
+                   <div key={item.id} className="rounded-2xl border-2 border-amore-200 bg-amore-50/30 overflow-hidden">
+                     <div className="p-4 flex items-center justify-between">
+                       <div>
+                         <div className="font-medium text-sm text-gray-800">{item.ja}</div>
+                         <div className="text-[10px] text-gray-400 mt-0.5">¥{item.minPrice.toLocaleString()}–¥{item.maxPrice.toLocaleString()}</div>
+                       </div>
+                       <div className="flex items-center gap-2 shrink-0">
+                         <span className="text-[9px] bg-amore-100 text-amore-600 font-black px-2 py-0.5 rounded-full uppercase tracking-wide">{t.requiredBadge}</span>
+                         <div className="w-8 h-8 rounded-full bg-amore-500 text-white flex items-center justify-center shrink-0">
+                           <Check size={14} />
+                         </div>
+                       </div>
+                     </div>
+                     <div className="px-4 pb-4 space-y-2">
+                       <div className="flex justify-between items-center text-xs">
+                         <span className="text-gray-500">/ {item.unit}</span>
+                         <div className="flex items-center gap-1">
+                           <span className="text-gray-400 font-mono">¥</span>
+                           <input
+                             type="number"
+                             min={item.minPrice}
+                             max={item.maxPrice}
+                             step={1000}
+                             value={price}
+                             onChange={e => {
+                               const v = Number(e.target.value);
+                               if (!isNaN(v)) setMandatoryPrices(prev => ({...prev, [item.id]: v}));
+                             }}
+                             onBlur={e => {
+                               const v = Math.min(item.maxPrice, Math.max(item.minPrice, Number(e.target.value) || item.defaultPrice));
+                               setMandatoryPrices(prev => ({...prev, [item.id]: v}));
+                             }}
+                             className="w-28 text-right font-mono font-bold text-amore-600 bg-transparent border-b border-amore-200 focus:outline-none focus:border-amore-500"
+                           />
+                         </div>
+                       </div>
+                       <input type="range" min={item.minPrice} max={item.maxPrice} step={5000}
+                         value={Math.min(item.maxPrice, Math.max(item.minPrice, price))}
+                         onChange={e => setMandatoryPrices(prev => ({...prev, [item.id]: Number(e.target.value)}))}
+                         className="w-full h-2 bg-white rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                       <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                         <span>¥{item.minPrice.toLocaleString()}</span><span>¥{item.maxPrice.toLocaleString()}</span>
+                       </div>
+                     </div>
+                   </div>
+                 );
+               })}
              </div>
-             <p className="text-xs text-gray-400 italic">※ 会場によって異なります。実際の見積は直接会場にご確認ください。</p>
+             <div className="flex justify-between items-center border-t border-amore-100 pt-3">
+               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.sec1Subtotal}</span>
+               <span className="font-mono font-bold text-amore-700">¥{venueMandatoryTotal.toLocaleString()}</span>
+             </div>
+             <p className="text-xs text-gray-400 italic">{t.venueSliderNote}</p>
            </div>
 
            {/* ── Section 2: Food & Drink ── */}
@@ -744,16 +1208,16 @@ export default function App() {
              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">2</div>
                <div>
-                 <h3 className="font-bold text-gray-900">料理・飲み物</h3>
-                 <p className="text-xs text-gray-400">Food & Drink — ゲスト人数に連動</p>
+                 <h3 className="font-bold text-gray-900">{t.foodDrinkTitle}</h3>
+                 <p className="text-xs text-gray-400">{t.foodDrinkSubtitle}</p>
                </div>
              </div>
              {/* Food plan selector */}
              <div className="space-y-4">
-               <p className="text-xs font-black uppercase text-gray-400 tracking-widest">料理プラン</p>
+               <p className="text-xs font-black uppercase text-gray-400 tracking-widest">{t.foodPlanLabel}</p>
                <div className="grid grid-cols-3 gap-3">
                  {(Object.keys(FOOD_PLANS) as FoodPlanType[]).map(plan => (
-                   <button key={plan} onClick={() => { setFoodPlan(plan); setFoodPricePerPerson(FOOD_PLANS[plan].defaultPrice); }}
+                   <button key={plan} onClick={() => { setFoodPlan(plan); setFoodPricePerPerson(FOOD_PLANS[plan].minPrice); }}
                      className={`py-3 px-2 rounded-2xl border-2 text-center transition-all ${foodPlan === plan ? 'bg-white border-amore-500 shadow-md text-amore-700' : 'bg-gray-50 border-gray-100 text-gray-500 hover:border-amore-200'}`}>
                      <div className="font-bold text-xs">{FOOD_PLANS[plan].ja}</div>
                      <div className="text-[10px] text-gray-400 mt-0.5">¥{FOOD_PLANS[plan].minPrice.toLocaleString()}~</div>
@@ -776,10 +1240,10 @@ export default function App() {
              {/* Drinks */}
              <div className="space-y-3">
                <div className="flex items-center justify-between">
-                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">フリードリンク</p>
+                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">{t.drinksLabel}</p>
                  <button onClick={() => setDrinksIncluded(p => !p)}
                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${drinksIncluded ? 'bg-amore-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                   {drinksIncluded ? '含む' : '含まない'}
+                   {drinksIncluded ? t.drinksIncluded : t.drinksNotIncluded}
                  </button>
                </div>
                {drinksIncluded && (
@@ -788,11 +1252,11 @@ export default function App() {
                      <span className="text-xs text-gray-500">フリードリンク / 人</span>
                      <span className="font-mono font-bold text-amore-600">¥{drinkPricePerPerson.toLocaleString()} × {venueInfo.guestCount} = ¥{(drinkPricePerPerson * venueInfo.guestCount).toLocaleString()}</span>
                    </div>
-                   <input type="range" min={2500} max={5000} step={100} value={drinkPricePerPerson}
+                   <input type="range" min={500} max={8000} step={100} value={drinkPricePerPerson}
                      onChange={e => setDrinkPricePerPerson(Number(e.target.value))}
                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
                    <div className="flex justify-between text-[9px] text-gray-400 font-mono">
-                     <span>¥2,500</span><span>¥5,000</span>
+                     <span>¥500</span><span>¥8,000</span>
                    </div>
                  </div>
                )}
@@ -800,7 +1264,7 @@ export default function App() {
              {/* Children */}
              <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-4">
                <div>
-                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">お子様</p>
+                 <p className="text-xs font-black uppercase text-gray-400 tracking-widest">{t.childLabel}</p>
                  <p className="text-[10px] text-gray-400 mt-0.5">¥{CHILD_PRICE.toLocaleString()} / 人</p>
                </div>
                <div className="flex items-center gap-3">
@@ -810,7 +1274,7 @@ export default function App() {
                </div>
              </div>
              <div className="flex justify-between items-center border-t border-gray-100 pt-3">
-               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Section 2 小計</span>
+               <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.sec2Subtotal}</span>
                <span className="font-mono font-bold text-gray-900">¥{(venueFoodTotal + venueDrinkTotal + venueChildTotal).toLocaleString()}</span>
              </div>
            </div>
@@ -820,8 +1284,8 @@ export default function App() {
              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                <div className="w-7 h-7 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-black">3</div>
                <div>
-                 <h3 className="font-bold text-gray-900">オプション項目</h3>
-                 <p className="text-xs text-gray-400">Optional Items (品目マスタ) — 必要に応じて追加</p>
+                 <h3 className="font-bold text-gray-900">{t.optionalItemsTitle}</h3>
+                 <p className="text-xs text-gray-400">{t.optionalItemsSubtitle}</p>
                </div>
              </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -875,7 +1339,7 @@ export default function App() {
         <div className={activeTab === 'amore' ? 'block space-y-10 animate-in' : 'hidden'}>
            <header className="text-center max-w-2xl mx-auto">
              <div className="flex items-center justify-center gap-3">
-               <h2 className="text-3xl sm:text-4xl font-serif font-bold">Amore サービス</h2>
+               <h2 className="text-3xl sm:text-4xl font-serif font-bold">{t.amoreServicesTitle}</h2>
                {isAdmin && (
                  <button onClick={() => setShowPriceSettings(true)}
                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-amore-100 text-gray-500 hover:text-amore-600 transition-colors"
@@ -884,7 +1348,7 @@ export default function App() {
                  </button>
                )}
              </div>
-             <p className="text-gray-500 mt-2 text-sm">Choose how to configure Amore services.</p>
+             <p className="text-gray-500 mt-2 text-sm">{t.amoreConfigDesc}</p>
            </header>
 
            {/* ── Mode selector ── */}
@@ -897,7 +1361,7 @@ export default function App() {
                  <Award size={28} />
                </div>
                <div>
-                 <div className="font-bold text-lg text-gray-900">スタンダードパッケージ</div>
+                 <div className="font-bold text-lg text-gray-900">{t.standardPackageTitle}</div>
                  <div className="text-3xl font-serif font-bold text-amore-600 mt-1">¥407,000 <span className="text-sm text-gray-400 font-normal">税込</span></div>
                  <div className="text-xs text-gray-400 mt-1">¥{AMORE_STANDARD_PRETAX.toLocaleString()} + 税</div>
                </div>
@@ -918,7 +1382,7 @@ export default function App() {
                  <ListChecks size={28} />
                </div>
                <div>
-                 <div className="font-bold text-lg text-gray-900">カスタム選択</div>
+                 <div className="font-bold text-lg text-gray-900">{t.customModeTitle}</div>
                  <div className="text-sm text-gray-500 mt-1">個別サービスを選択してカスタマイズ</div>
                  <div className="text-sm text-gray-400">Custom individual services</div>
                </div>
@@ -933,19 +1397,23 @@ export default function App() {
                  <div className="flex items-center gap-3 pb-5">
                    <div className="w-7 h-7 rounded-full bg-amore-500 text-white flex items-center justify-center text-xs font-black">Q</div>
                    <div>
-                     <h3 className="font-bold text-gray-900">サービス構成を選択</h3>
-                     <p className="text-xs text-gray-400">Answer to auto-configure prices below</p>
+                     <h3 className="font-bold text-gray-900">{t.serviceConfigTitle}</h3>
+                     <p className="text-xs text-gray-400">{t.autoConfigDesc}</p>
                    </div>
                  </div>
 
                  {/* Dress count */}
                  <div className="flex items-center justify-between py-4">
-                   <div><div className="text-sm font-medium text-gray-800">ドレスの数</div><div className="text-[10px] text-gray-400">2着目 +¥{AMORE_ADDON_CONFIG.dressSecond.toLocaleString()}</div></div>
+                   <div><div className="text-sm font-medium text-gray-800">衣装レンタル</div><div className="text-[10px] text-gray-400">なし → 合計から除外 / 2着目 +¥{AMORE_ADDON_CONFIG.dressSecond.toLocaleString()}</div></div>
                    <div className="flex gap-2">
-                     {([1,2] as const).map(n => (
+                     {([0,1,2] as const).map(n => (
                        <button key={n} onClick={() => setAmoreAddons(p => ({...p, dressCount: n}))}
-                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.dressCount === n ? 'bg-amore-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                         {n}着{n===2?'+':''}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                           amoreAddons.dressCount === n
+                             ? n === 0 ? 'bg-gray-400 text-white shadow-sm' : 'bg-amore-500 text-white shadow-sm'
+                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                         }`}>
+                         {n === 0 ? 'なし' : `${n}着${n===2?'+':''}`}
                        </button>
                      ))}
                    </div>
@@ -964,14 +1432,31 @@ export default function App() {
                    </div>
                  </div>
 
+                 {/* Makeup looks */}
+                 <div className="flex items-center justify-between py-4">
+                   <div><div className="text-sm font-medium text-gray-800">ヘアメイク ルック数</div><div className="text-[10px] text-gray-400">なし → 合計から除外 / 自動価格反映</div></div>
+                   <div className="flex gap-2">
+                     {([0,1,2] as const).map(n => (
+                       <button key={n} onClick={() => setAmoreAddons(p => ({...p, makeupLooks: n}))}
+                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                           amoreAddons.makeupLooks === n
+                             ? n === 0 ? 'bg-gray-400 text-white shadow-sm' : 'bg-amore-500 text-white shadow-sm'
+                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                         }`}>
+                         {n === 0 ? 'なし' : `${n} look${n===2?'s':''}`}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+
                  {/* Makeup rehearsal */}
                  <div className="flex items-center justify-between py-4">
-                   <div><div className="text-sm font-medium text-gray-800">ヘアメイクリハーサル</div><div className="text-[10px] text-gray-400">Makeup rehearsal included</div></div>
+                   <div><div className="text-sm font-medium text-gray-800">ヘアメイク リハーサル</div><div className="text-[10px] text-gray-400">リハーサルあり → 価格レンジが上がります</div></div>
                    <div className="flex gap-2">
                      {([true,false] as const).map(v => (
                        <button key={String(v)} onClick={() => setAmoreAddons(p => ({...p, makeupRehearsal: v}))}
                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${amoreAddons.makeupRehearsal===v ? (v?'bg-amore-500 text-white shadow-sm':'bg-gray-300 text-gray-700') : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                         {v?'含む':'含まない'}
+                         {v?'あり':'なし'}
                        </button>
                      ))}
                    </div>
@@ -1068,41 +1553,72 @@ export default function App() {
                </div>
 
                {/* Auto-configured service cards */}
-               {amoreServices.filter(s => s.isSelected).length > 0 && (
-                 <div className="space-y-4">
-                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">選択内容に基づく自動設定価格 — Fine-tune if needed</h3>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                     {amoreServices.filter(s => s.isSelected).map(service => {
-                       const isPerTable = service.id === 'amore_guest_fl';
-                       const localizedName = getServiceName(service.id);
-                       const qty = service.quantity || 1;
-                       return (
-                         <div key={service.id} className="bg-white rounded-[2rem] border-2 border-amore-100 shadow-sm p-5 space-y-4">
-                           <div className="flex justify-between items-start">
-                             <h4 className="font-serif text-sm font-bold text-gray-900 leading-tight flex-1 pr-2">{localizedName}</h4>
-                             <span className="text-[9px] bg-amore-100 text-amore-600 rounded-full px-2 py-0.5 font-black uppercase shrink-0">自動設定</span>
-                           </div>
-                           <div className="bg-gray-50 rounded-xl p-3 space-y-3">
-                             <div className="flex justify-between text-xs">
-                               <span className="text-gray-500">{t.qualityVolume}</span>
-                               <span className="font-mono font-bold text-amore-600">¥{service.currentPrice.toLocaleString()}{isPerTable ? ` × ${qty} 卓` : ''}</span>
+               <div className="space-y-4">
+                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">{t.autoPriceTitle}</h3>
+                 {amoreServices.filter(s => s.isSelected).length === 0 && (
+                   <p className="text-sm text-gray-400 italic">{t.noServicesMsg}</p>
+                 )}
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                   {amoreServices.filter(s => s.isSelected).map(service => {
+                     const isPerTable = service.id === 'amore_guest_fl';
+                     const localizedName = getServiceName(service.id);
+                     const qty = service.quantity || 1;
+                     const effectivePrice = getEffectivePrice(service);
+                     const addonAmt = effectivePrice - service.currentPrice;
+                     const optionNote = getAmoreOptionText(service);
+                     return (
+                       <div key={service.id} className="bg-white rounded-[2rem] border-2 border-amore-100 shadow-sm p-5 space-y-3">
+                         <div className="flex justify-between items-start">
+                           <h4 className="font-serif text-sm font-bold text-gray-900 leading-tight flex-1 pr-2">{localizedName}</h4>
+                           <button onClick={() => toggleAmoreService(service.id)}
+                             title={t.excludeServiceTitle}
+                             className="w-6 h-6 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-400 flex items-center justify-center transition-all shrink-0">
+                             <X size={11} />
+                           </button>
+                         </div>
+                         {optionNote && (
+                           <p className="text-[10px] text-amore-600 italic">{optionNote}</p>
+                         )}
+                         <div className="bg-gray-50 rounded-xl p-3 space-y-3">
+                           <div className="flex justify-between items-center text-xs">
+                             <span className="text-gray-500">基本価格</span>
+                             <div className="text-right">
+                               <span className="font-mono font-bold text-gray-700">¥{service.currentPrice.toLocaleString()}{isPerTable ? ` × ${qty}卓` : ''}</span>
+                               {addonAmt > 0 && (
+                                 <span className="ml-1.5 text-[10px] bg-amore-100 text-amore-600 font-bold px-1.5 py-0.5 rounded-full">+¥{addonAmt.toLocaleString()}</span>
+                               )}
                              </div>
-                             <input type="range" min={service.minPrice} max={service.maxPrice} step={5000}
-                               value={service.currentPrice} onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
-                               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
-                             <div className="flex justify-between text-[9px] text-gray-400 font-mono">
-                               <span>¥{service.minPrice.toLocaleString()}</span><span>¥{service.maxPrice.toLocaleString()}</span>
-                             </div>
                            </div>
-                           <div className="text-right font-mono font-bold text-sm text-gray-800">
-                             ¥{(service.currentPrice * qty).toLocaleString()}
+                           <input type="range" min={service.minPrice} max={service.maxPrice}
+                             step={service.id === 'amore_guest_fl' ? 500 : 5000}
+                             value={service.currentPrice} onChange={e => updateAmorePrice(service.id, Number(e.target.value))}
+                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amore-500" />
+                           <div className="flex justify-between text-[9px] text-gray-400 font-mono">
+                             <span>¥{(service.minPrice + addonAmt).toLocaleString()}</span>
+                             <span>¥{(service.maxPrice + addonAmt).toLocaleString()}</span>
                            </div>
                          </div>
-                       );
-                     })}
-                   </div>
+                         <div className="flex justify-between items-center border-t border-gray-100 pt-2">
+                           <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">{t.sectionSubtotal}</span>
+                           <span className="font-mono font-bold text-sm text-amore-700">¥{(effectivePrice * qty).toLocaleString()}</span>
+                         </div>
+                       </div>
+                     );
+                   })}
                  </div>
-               )}
+                 {/* Excluded services — click to re-add */}
+                 {amoreServices.some(s => !s.isSelected) && (
+                   <div className="flex items-start gap-2 flex-wrap pt-3 border-t border-gray-100">
+                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide shrink-0 mt-0.5">{t.excludedLabel}</span>
+                     {amoreServices.filter(s => !s.isSelected).map(s => (
+                       <button key={s.id} onClick={() => toggleAmoreService(s.id)}
+                         className="text-[10px] bg-gray-100 text-gray-400 hover:bg-amore-50 hover:text-amore-600 rounded-full px-2.5 py-0.5 line-through hover:no-underline transition-all">
+                         + {getServiceName(s.id)}
+                       </button>
+                     ))}
+                   </div>
+                 )}
+               </div>
              </div>
            )}
 
@@ -1174,8 +1690,25 @@ export default function App() {
                     <h1 className="text-4xl sm:text-5xl font-serif font-bold text-gray-900">{t.title}</h1>
                     <p className="text-gray-400 tracking-widest uppercase text-[10px] font-black">{t.guestCount}: {venueInfo.guestCount} Guests • {t.date}: {todayDate}</p>
                     {venueInfo.name && <p className="text-amore-600 font-serif text-lg italic mt-2">Venue: {venueInfo.name}</p>}
+                    {weddingDate && (
+                      <div className="text-sm text-gray-500">
+                        {t.weddingDateLabel}: {weddingDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+                        <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded-full ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].bg} ${ROKUYO_DATA[getRokuyoIndex(weddingDate)].color}`}>
+                          {ROKUYO_DATA[getRokuyoIndex(weddingDate)].ja}
+                        </span>
+                      </div>
+                    )}
                  </div>
-                 
+
+                 {/* Simulation banner */}
+                 <div className="mx-auto max-w-2xl bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 flex items-start gap-3">
+                   <span className="text-amber-500 text-lg shrink-0">⚠</span>
+                   <div className="text-left space-y-1">
+                     <p className="text-[11px] font-black text-amber-700 uppercase tracking-wide">参考シミュレーション / Budget Simulation Only</p>
+                     <p className="text-xs text-amber-700/80 leading-relaxed">{t.disclaimer}</p>
+                   </div>
+                 </div>
+
                  <div className="bg-rose-50/50 border border-rose-100 p-6 rounded-3xl mx-auto max-w-2xl">
                     <p className="text-amore-700 text-sm italic leading-relaxed">
                        {t.appIntro}
@@ -1193,10 +1726,15 @@ export default function App() {
                      <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
                    </div>
                    <div className="space-y-5">
-                     <div className="flex justify-between items-baseline">
-                       <span className="font-serif text-lg sm:text-xl text-gray-800">パッケージプラン</span>
-                       <span className="font-mono font-bold text-base sm:text-lg">¥{venuePackagePrice.toLocaleString()}</span>
-                     </div>
+                     {VENUE_MANDATORY_ITEMS.map(item => {
+                       const price = mandatoryPrices[item.id] ?? item.defaultPrice;
+                       return (
+                         <div key={item.id} className="flex justify-between items-baseline">
+                           <span className="font-serif text-lg sm:text-xl text-gray-800">{item.ja}</span>
+                           <span className="font-mono font-bold text-base sm:text-lg">¥{price.toLocaleString()}</span>
+                         </div>
+                       );
+                     })}
                      <div className="flex justify-between items-baseline">
                        <div className="flex flex-col">
                          <span className="font-serif text-lg sm:text-xl text-gray-800">お食事（{FOOD_PLANS[foodPlan].ja}）</span>
@@ -1216,7 +1754,7 @@ export default function App() {
                      {childCount > 0 && (
                        <div className="flex justify-between items-baseline">
                          <div className="flex flex-col">
-                           <span className="font-serif text-lg sm:text-xl text-gray-800">お子様料金</span>
+                           <span className="font-serif text-lg sm:text-xl text-gray-800">{t.childFeeLabel}</span>
                            <span className="text-[10px] text-gray-400 font-mono mt-1">¥{CHILD_PRICE.toLocaleString()} × {childCount}名</span>
                          </div>
                          <span className="font-mono font-bold text-base sm:text-lg">¥{venueChildTotal.toLocaleString()}</span>
@@ -1237,18 +1775,24 @@ export default function App() {
                        );
                      })}
                      <div className="flex justify-between items-center border-t border-gray-100 pt-4">
-                       <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">会場小計</span>
+                       <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.venueSubtotalLabel}</span>
                        <span className="font-mono font-bold text-base sm:text-lg text-gray-700">¥{venueSubtotal.toLocaleString()}</span>
                      </div>
+                     {demandSurcharge > 0 && (
+                       <div className="flex justify-between items-baseline">
+                         <span className="font-serif text-lg sm:text-xl text-red-700">{t.demandSurcharge} {dateDemand ? getDemandLabel(dateDemand) : ''}</span>
+                         <span className="font-mono font-bold text-base sm:text-lg text-red-700">+¥{demandSurcharge.toLocaleString()}</span>
+                       </div>
+                     )}
                    </div>
                  </div>
 
                  {/* ── Amore Section ── */}
-                 {amoreMode && (
+                 {amoreSubtotal > 0 && (
                    <div className="break-inside-avoid group">
                      <div className="flex items-center gap-4 mb-6">
                        <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
-                       <h3 className="text-[10px] font-black text-gray-300 group-hover:text-amore-400 uppercase tracking-[0.3em] transition-colors">Amoreサービス</h3>
+                       <h3 className="text-[10px] font-black text-gray-300 group-hover:text-amore-400 uppercase tracking-[0.3em] transition-colors">{t.amoreServicesLabel}</h3>
                        <div className="h-px flex-1 bg-gray-100 group-hover:bg-amore-200 transition-colors"></div>
                      </div>
                      <div className="space-y-5">
@@ -1256,7 +1800,7 @@ export default function App() {
                          <div className="space-y-4">
                            <div className="flex justify-between items-baseline text-amore-700 bg-amore-50/30 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 rounded-3xl border border-amore-50">
                              <div className="flex flex-col">
-                               <span className="font-serif text-lg sm:text-xl font-bold">スタンダードパッケージ</span>
+                               <span className="font-serif text-lg sm:text-xl font-bold">{t.standardPackageTitle}</span>
                                <span className="text-[10px] text-amore-400 font-mono mt-1">税込 ¥407,000</span>
                              </div>
                              <span className="font-mono font-bold text-lg sm:text-xl">¥{AMORE_STANDARD_PRETAX.toLocaleString()}</span>
@@ -1292,7 +1836,7 @@ export default function App() {
                          </>
                        )}
                        <div className="flex justify-between items-center border-t border-gray-100 pt-4">
-                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Amore小計</span>
+                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.amoreSubtotalLabel}</span>
                          <span className="font-mono font-bold text-base sm:text-lg text-amore-700">¥{amoreSubtotal.toLocaleString()}</span>
                        </div>
                      </div>
@@ -1412,7 +1956,7 @@ export default function App() {
                         className="bg-amore-600 text-white px-4 sm:px-5 py-2 sm:py-3 rounded-xl hover:bg-amore-700 transition-all flex items-center justify-center gap-2 shadow-lg text-xs font-bold"
                       >
                         <FileText size={15} />
-                        <span className="hidden sm:inline">見積書</span>
+                        <span className="hidden sm:inline">シミュレーション</span>
                       </button>
                       <button onClick={handleDownloadImage} disabled={capturing} className="bg-gray-900 text-white px-5 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-black transition-all flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50">
                         {capturing ? <Loader2 className="animate-spin" /> : <Download size={16} />}
@@ -1427,7 +1971,7 @@ export default function App() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl my-8">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h3 className="font-serif text-xl font-bold text-gray-900">御見積書 プレビュー</h3>
+              <h3 className="font-serif text-xl font-bold text-gray-900">費用シミュレーション プレビュー</h3>
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleDownloadTemplate}
@@ -1444,21 +1988,34 @@ export default function App() {
             {/* Template content captured by html2canvas */}
             <div id="template-quote-content" className="p-8 sm:p-12 bg-white font-sans" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
               {/* Header */}
+              {/* Simulation banner */}
+              <div className="mb-6 px-4 py-2 bg-amber-50 border border-amber-200 rounded text-center">
+                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">⚠ 本書は費用シミュレーション（参考試算）です。正式な見積書・契約書ではありません。</span>
+              </div>
+
               <div className="flex justify-between items-start mb-8">
-                <div className="space-y-1">
-                  <div className="text-xs text-gray-500">Wedding Date:</div>
-                  <div className="text-sm font-bold text-gray-800 border-b border-gray-300 pb-1 w-48">
-                    {venueInfo.name || '　'}
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">お客様名 / Client Name</div>
+                    <div className="text-sm border-b-2 border-gray-400 pb-0.5 w-52 text-gray-300 italic">（ここにご記入ください）</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-2">会場：</div>
-                  <div className="text-sm font-medium text-gray-700 border-b border-gray-300 pb-1 w-48">
-                    {venueInfo.name || '　'}
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">結婚式日程 / Wedding Date</div>
+                    <div className="text-sm border-b-2 border-gray-400 pb-0.5 w-52 text-gray-300 italic">（ここにご記入ください）</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-2">有効期限：</div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">ご希望会場 / Venue</div>
+                    <div className="text-sm border-b-2 border-gray-400 pb-0.5 w-52 text-gray-300 italic">（ここにご記入ください）</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-0.5">お招待人数 / Guest Count</div>
+                    <div className="text-sm border-b border-gray-300 pb-0.5 w-52 font-medium text-gray-700">{venueInfo.guestCount}名</div>
+                  </div>
                 </div>
                 <div className="text-right space-y-1">
-                  <div className="text-3xl font-bold text-gray-900" style={{ fontFamily: "serif" }}>御　見　積　書</div>
-                  <div className="text-xs text-gray-500 mt-4">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                  <div className="text-2xl font-bold text-gray-900" style={{ fontFamily: "serif" }}>費用シミュレーション</div>
+                  <div className="text-xs text-gray-400">（参考試算 · 正式見積書ではありません）</div>
+                  <div className="text-xs text-gray-500 mt-3">{new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                   <div className="text-xs text-gray-500">StartUP株式会社</div>
                   <div className="text-xs text-gray-400">東京都文京区千石４丁目26-2</div>
                   <div className="text-xs text-gray-400">ＳＡＮＳＡＮ千石第一ビル 301</div>
@@ -1466,11 +2023,11 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-600 mb-6 border-b border-gray-200 pb-4">下記のとおりお見積申し上げます。</div>
+              <div className="text-sm text-gray-600 mb-6 border-b border-gray-200 pb-4">下記のとおりシミュレーション金額をご案内いたします。<span className="text-xs text-gray-400 ml-2">（実際の金額は担当プランナーより確認のうえご案内いたします）</span></div>
 
               {/* Total amount box */}
               <div className="flex justify-between items-center mb-6 p-4 border-2 border-gray-900">
-                <div className="text-sm font-bold text-gray-700">お見積金額</div>
+                <div className="text-sm font-bold text-gray-700">シミュレーション金額<span className="text-[10px] font-normal text-gray-400 ml-1">（参考）</span></div>
                 <div className="text-2xl font-bold text-gray-900">¥{Math.floor(grandTotal).toLocaleString()} -</div>
                 <div className="text-xs text-gray-500">
                   <div>小計: ¥{subtotalBeforeTax.toLocaleString()}</div>
@@ -1497,7 +2054,10 @@ export default function App() {
                     let no = 1;
                     // Venue line items
                     const venueLineItems = [
-                      { id: 'venue_pkg', name: 'パッケージプラン', qty: 1, unit: '式', unitPrice: venuePackagePrice },
+                      ...VENUE_MANDATORY_ITEMS.map(item => ({
+                        id: item.id, name: item.ja, qty: 1, unit: item.unit,
+                        unitPrice: mandatoryPrices[item.id] ?? item.defaultPrice
+                      })),
                       { id: 'venue_food', name: `お食事（${FOOD_PLANS[foodPlan].ja}）`, qty: venueInfo.guestCount, unit: '人', unitPrice: foodPricePerPerson },
                       ...(drinksIncluded ? [{ id: 'venue_drink', name: 'ドリンク', qty: venueInfo.guestCount, unit: '人', unitPrice: drinkPricePerPerson }] : []),
                       ...(childCount > 0 ? [{ id: 'venue_child', name: 'お子様料金', qty: childCount, unit: '人', unitPrice: CHILD_PRICE }] : []),
@@ -1538,14 +2098,15 @@ export default function App() {
                       amoreServices.filter(s => s.isSelected).forEach(service => {
                         const jaName = AMORE_TEMPLATE_NAMES[service.id] || service.name;
                         const qty = service.quantity || 1;
-                        const total = service.currentPrice * qty;
+                        const ep = getEffectivePrice(service);
+                        const total = ep * qty;
                         rows.push(
                           <tr key={service.id} className="even:bg-gray-50 bg-rose-50/30">
                             <td className="border border-gray-300 px-2 py-1.5 text-center">{no++}</td>
                             <td className="border border-gray-300 px-3 py-1.5 text-amore-700">{jaName}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">{qty}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">式</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{service.currentPrice.toLocaleString()}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-right font-mono">¥{ep.toLocaleString()}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-right font-mono font-bold">¥{total.toLocaleString()}</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-center text-gray-500">10%</td>
                           </tr>
@@ -1602,8 +2163,10 @@ export default function App() {
 
               {/* Footer */}
               <div className="flex justify-between items-end text-xs text-gray-500 border-t border-gray-200 pt-4 mt-4">
-                <div>
-                  <div className="text-[10px] text-gray-400 italic">{t.disclaimer}</div>
+                <div className="max-w-xs space-y-1">
+                  <div className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">参考試算 / Simulation Only</div>
+                  <div className="text-[9px] text-gray-400 italic leading-relaxed">{t.disclaimer}</div>
+                  <div className="text-[9px] text-gray-400 italic">本シミュレーションはAmoreスタッフとの打ち合わせのベースとしてお使いください。</div>
                 </div>
                 <div className="text-right space-y-0.5">
                   <div className="font-bold text-gray-700">StartUP株式会社 / Amore Wedding Tokyo</div>
