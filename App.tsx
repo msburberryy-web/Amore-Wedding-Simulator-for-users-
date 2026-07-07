@@ -989,7 +989,7 @@ export default function App() {
               </div>
 
               {/* Calendar grid */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1.5">
                 {(() => {
                   const firstDay = new Date(calYear, calMonth, 1).getDay();
                   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
@@ -1009,20 +1009,27 @@ export default function App() {
                     const isPast = date < today;
                     cells.push(
                       <button key={day} disabled={isPast} onClick={() => setWeddingDate(date)}
-                        className={`relative rounded-xl p-1 text-left transition-all min-h-[68px] flex flex-col gap-0.5 border text-[10px]
-                          ${isPast ? 'opacity-25 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.04] hover:shadow-md'}
-                          ${isSelected ? 'bg-amore-500 border-amore-600 text-white shadow-lg scale-[1.06]'
+                        className={`relative rounded-xl p-2 text-left transition-all min-h-[76px] flex flex-col border
+                          ${isPast ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.04] hover:shadow-md'}
+                          ${isSelected ? 'bg-amore-500 border-amore-600 shadow-lg scale-[1.06]'
+                            : demand.surcharge > 0 ? `${rokuyo.bg} border-orange-300`
                             : `${rokuyo.bg} ${rokuyo.border}`}`}>
-                        <span className={`font-black text-sm leading-none pl-0.5 ${isSelected?'text-white':isWeekend?(dow===0?'text-red-500':'text-blue-500'):'text-gray-800'}`}>
-                          {day}{isToday&&<span className="ml-0.5 text-[7px]">今</span>}
+                        {/* Day number */}
+                        <span className={`font-black text-base leading-none ${isSelected?'text-white':isWeekend?(dow===0?'text-red-500':'text-blue-500'):'text-gray-800'}`}>
+                          {day}{isToday && <span className={`ml-0.5 text-[8px] align-top ${isSelected?'text-white/70':'text-amore-400'}`}>●</span>}
                         </span>
-                        <span className={`font-bold leading-none pl-0.5 ${isSelected?'text-white/90':rokuyo.color}`}>{rokuyo.ja}</span>
-                        {myanmar.label && (
-                          <span className={`leading-none pl-0.5 ${isSelected?'text-white/80':myanmar.tier==='good'?'text-teal-500':myanmar.tier==='avoid'?'text-orange-400':'text-gray-400'}`}>{myanmar.label}</span>
+                        {/* Rokuyo name */}
+                        <span className={`text-[10px] font-bold leading-none mt-1 ${isSelected?'text-white/90':rokuyo.color}`}>{rokuyo.ja}</span>
+                        {/* Myanmar indicator */}
+                        {myanmar.tier !== 'neutral' && (
+                          <span className={`text-[11px] font-bold leading-none mt-auto ${
+                            isSelected ? 'text-white/80'
+                            : myanmar.tier === 'good' ? 'text-teal-500'
+                            : 'text-orange-500'
+                          }`}>
+                            {myanmar.tier === 'good' ? '✓' : '△'}
+                          </span>
                         )}
-                        {!isSelected && demand.level==='peak'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-red-500 text-white rounded px-0.5 font-black leading-tight">{t.calPeak}</span>}
-                        {!isSelected && demand.level==='high'  && <span className="absolute top-0.5 right-0.5 text-[7px] bg-orange-400 text-white rounded px-0.5 font-black leading-tight">{t.calPopular}</span>}
-                        {!isSelected && demand.level==='low'   && <span className="absolute top-0.5 right-0.5 text-[7px] bg-gray-300 text-gray-600 rounded px-0.5 leading-tight">{t.calDiscount}</span>}
                       </button>
                     );
                   }
@@ -1031,13 +1038,13 @@ export default function App() {
               </div>
 
               {/* Legend */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-3 border-t border-gray-50 text-[10px] text-gray-500">
-                <span><span className="inline-block w-2 h-2 rounded-full bg-rose-400 mr-1"/>{t.legendBest}</span>
-                <span><span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1"/>{t.legendGood}</span>
-                <span><span className="inline-block w-2 h-2 rounded-full bg-gray-300 mr-1"/>{t.legendBad}</span>
-                <span className="text-red-500 font-bold">{t.legendPeak}</span>
-                <span className="text-teal-500">ကြာသ = {t.legendMyanmarGood}</span>
-                <span className="text-orange-400">ရက်ကြမ်း = {t.legendMyanmarAvoid}</span>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 pt-3 border-t border-gray-50 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-rose-50 border border-rose-200 shrink-0"/>{t.legendBest}</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-green-50 border border-green-200 shrink-0"/>{t.legendGood}</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200 shrink-0"/>{t.legendBad}</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-orange-50 border border-orange-300 shrink-0"/>{t.legendPeak}</span>
+                <span className="flex items-center gap-1.5 text-teal-600 font-bold"><span className="shrink-0">✓</span>{t.legendMyanmarGood}</span>
+                <span className="flex items-center gap-1.5 text-orange-500 font-bold"><span className="shrink-0">△</span>{t.legendMyanmarAvoid}</span>
               </div>
             </div>
 
